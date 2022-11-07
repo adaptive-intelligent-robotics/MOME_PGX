@@ -1,0 +1,37 @@
+hydra:
+    run:
+        #dir: ./results/${now:%Y-%m-%d}/${now:%H-%M-%S}
+        dir: ./results/
+
+# Env config
+alg_name: mome_rastrigin
+seed: 42
+env_name: rastrigin
+episode_length: 1
+
+# MOME parameters
+pareto_front_max_length: 50
+init_batch_size: 100
+batch_size: 256 
+num_evaluations: 100000
+num_centroids: 128
+num_init_cvt_samples: 20000
+
+# Rastrigin parameters
+num_param_dimensions: 100
+num_descriptor_dimensions: 2
+minval: -2 
+maxval: 4 
+lag: 2.2 
+base_lag: 0 
+reference_point: [-150, -150]
+
+# Emitter parameters
+proportion_to_mutate: 0.6 
+eta: 1 
+proportion_var_to_change: 0.5 
+crossover_percentage: 1. 
+
+# Logging parameters
+metrics_log_period: 10
+
