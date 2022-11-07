@@ -797,3 +797,105 @@ def plot_multidimensional_map_elites_grid(
     )
 
     return fig, ax
+
+
+def plot_mome_scores_evolution(
+    metrics_history: Dict,
+    ax: Optional[plt.Axes],
+    fig: Optional[plt.Figure],
+    batch_size: int,
+    num_iterations: int,
+    episode_length: int = 1,
+    title_size: int = 10,
+    font_size: int = 12,
+) -> Tuple[Optional[Figure], Axes]:
+
+        # Customize matplotlib params
+        mpl.rcParams["axes.labelsize"] = font_size
+        mpl.rcParams["axes.titlesize"] = title_size
+        mpl.rcParams["legend.fontsize"] = font_size
+        mpl.rcParams["xtick.labelsize"] = font_size
+        mpl.rcParams["ytick.labelsize"] = font_size
+        mpl.rcParams["text.usetex"] = False
+        mpl.rcParams["axes.titlepad"] = 10
+
+        # Visualize the training evolution and final repertoire
+        x_range = jnp.arange(num_iterations) * episode_length * batch_size
+
+        if episode_length != 1:
+            x_label = "Environment steps"
+
+        else:
+            x_label = "Number of evaluations"
+
+
+        ax[0].plot(x_range, metrics_history["moqd_score"])
+        ax[0].set_xlabel(x_label)
+        ax[0].set_ylabel("MOQD Score")
+        ax[0].set_title("MOQD Score evolution during training")
+        ax[0].set_aspect(0.95 / ax[0].get_data_ratio(), adjustable="box")  
+
+        ax[1].plot(x_range, metrics_history["coverage"])
+        ax[1].set_xlabel(x_label)
+        ax[1].set_ylabel("Coverage in %")
+        ax[1].set_title("Coverage evolution during training")
+        ax[1].set_aspect(0.95 / ax[1].get_data_ratio(), adjustable="box")  
+
+        fig.tight_layout(pad=5.0)
+
+
+        return ax, fig
+
+
+def plot_mome_max_scores_evolution(
+    metrics_history: Dict,
+    ax: Optional[plt.Axes],
+    fig: Optional[plt.Figure],
+    batch_size: int,
+    num_iterations: int,
+    episode_length: int = 1,
+    title_size: int = 10,
+    font_size: int = 12,
+) -> Tuple[Optional[Figure], Axes]:
+
+        # Customize matplotlib params
+        mpl.rcParams["axes.labelsize"] = font_size
+        mpl.rcParams["axes.titlesize"] = title_size
+        mpl.rcParams["legend.fontsize"] = font_size
+        mpl.rcParams["xtick.labelsize"] = font_size
+        mpl.rcParams["ytick.labelsize"] = font_size
+        mpl.rcParams["text.usetex"] = False
+        mpl.rcParams["axes.titlepad"] = 10
+
+        # Visualize the training evolution and final repertoire
+        x_range = jnp.arange(num_iterations) * episode_length * batch_size
+
+        if episode_length != 1:
+            x_label = "Environment steps"
+
+        else:
+            x_label = "Number of evaluations"
+
+
+        ax[0].plot(x_range, metrics_history["max_hypervolume"])
+        ax[0].set_xlabel(x_label)
+        ax[0].set_ylabel("Maximum hypervolume")
+        ax[0].set_title("Maximum hypervolume evolution during training")
+        ax[0].set_aspect(0.95 / ax[0].get_data_ratio(), adjustable="box")
+
+        ax[1].plot(x_range, metrics_history["global_hypervolume"])
+        ax[1].set_xlabel(x_label)
+        ax[1].set_ylabel("Global hypervolume")
+        ax[1].set_title("Global hypervolume evolution during training")
+        ax[1].set_aspect(0.95 / ax[1].get_data_ratio(), adjustable="box")
+
+        ax[2].plot(x_range, metrics_history["max_sum_scores"])
+        ax[2].set_xlabel(x_label)
+        ax[2].set_ylabel("Max Sum Scores")
+        ax[2].set_title("Max Sum Score evolution during training")
+        ax[2].set_aspect(0.95 / ax[2].get_data_ratio(), adjustable="box")    
+
+        fig.tight_layout(pad=5.0)
+
+
+        return ax, fig
