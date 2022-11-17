@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import csv
+import time
 from functools import partial
 from typing import Dict, List
 
@@ -111,18 +112,27 @@ def default_moqd_metrics(
     Returns:
         A dictionary containing all the computed metrics.
     """
-    repertoire_empty = repertoire.fitnesses == -jnp.inf
-    repertoire_empty = jnp.all(repertoire_empty, axis=-1)
-    repertoire_not_empty = ~repertoire_empty
-    repertoire_not_empty = jnp.any(repertoire_not_empty, axis=-1)
+    # Calculating coverage
+    repertoire_empty = repertoire.fitnesses == -jnp.inf # num centroids x pareto-front length x num criteria
+    repertoire_empty = jnp.all(repertoire_empty, axis=-1) # num centroids x pareto-front length
+    repertoire_not_empty = ~repertoire_empty # num centroids x pareto-front length
+    num_solutions = jnp.sum(repertoire_not_empty)
+    repertoire_not_empty = jnp.any(repertoire_not_empty, axis=-1) # num centroids
     coverage = 100 * jnp.mean(repertoire_not_empty)
+
+    # Calculating hypervolumes
     hypervolume_function = partial(compute_hypervolume, reference_point=reference_point)
-    moqd_scores = jax.vmap(hypervolume_function)(repertoire.fitnesses)
-    moqd_scores = jnp.where(repertoire_not_empty, moqd_scores, -jnp.inf)
-    max_hypervolume = jnp.max(moqd_scores)
+    hypervolumes = jax.vmap(hypervolume_function)(repertoire.fitnesses)  # num centroids
+    # Set empty cell hypervolumes = -inf
+    hypervolumes = jnp.where(repertoire_not_empty, hypervolumes, -jnp.inf)
+
+    # Calculate metrics
+    moqd_score = jnp.sum(repertoire_not_empty * hypervolumes)
+    max_hypervolume = jnp.max(moqd_score)
     max_scores = jnp.max(repertoire.fitnesses, axis=(0, 1))
     max_sum_scores = jnp.max(jnp.sum(repertoire.fitnesses, axis=-1), axis=(0, 1))
     num_solutions = jnp.sum(~repertoire_empty)
+    
     (
         pareto_front,
         _,
@@ -132,7 +142,8 @@ def default_moqd_metrics(
         pareto_front, reference_point=reference_point
     )
     metrics = {
-        "moqd_score": moqd_scores,
+        "hypervolumes": hypervolumes,
+        "moqd_score": moqd_score,
         "max_hypervolume": max_hypervolume,
         "max_scores": max_scores,
         "max_sum_scores": max_sum_scores,
