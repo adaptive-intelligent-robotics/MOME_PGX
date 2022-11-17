@@ -74,7 +74,6 @@ class RunMOME:
         self.num_iterations =  num_iterations
         self.num_centroids = num_centroids
         self.num_init_cvt_samples = num_init_cvt_samples
-        self.init_batch_size = init_batch_size
         self.batch_size =  batch_size
         self.scoring_fn = scoring_fn
         self.emitter = emitter
@@ -85,6 +84,7 @@ class RunMOME:
 
     def run(self,
             random_key: RNGKey,
+            init_genotypes: jnp.ndarray,
             ) -> Tuple[MOMERepertoire, jnp.ndarray, RNGKey]:
             
         logging.basicConfig(level=logging.DEBUG)
@@ -92,16 +92,6 @@ class RunMOME:
         logger = logging.getLogger(f"{__name__}")
         output_dir = "./" #get_output_dir()
 
-        # initial population
-        random_key, subkey = jax.random.split(random_key)
-
-        init_genotypes = jax.random.uniform(
-            subkey, 
-            (self.init_batch_size, self.num_param_dimensions), 
-            minval=self.minval, 
-            maxval=self.maxval, 
-            dtype=jnp.float32
-        )
 
         # Compute the centroids
         centroids, random_key = compute_cvt_centroids(
@@ -139,6 +129,7 @@ class RunMOME:
             header = [
                 "loop", 
                 "iteration",
+                "hypervolumes",
                 "moqd_score", 
                 "max_scores",  
                 "max_sum_scores", 
@@ -172,6 +163,9 @@ class RunMOME:
             for key, value in metrics.items():
 
                 # take last value
+                #print("KEY:", key)
+                #print("VALUE:", value.shape)
+
                 logged_metrics[key] = value[-1]
 
                 # take all values
@@ -185,7 +179,7 @@ class RunMOME:
         return repertoire, centroids, random_key, metrics, metrics_history
 
 
-    def plot_final_repertoire(
+    def plot_repertoire(
         self,
         repertoire: MOMERepertoire,
         centroids: jnp.ndarray,
@@ -208,6 +202,7 @@ class RunMOME:
         # add map elites plot on last axes
         fig, axes = plot_2d_map_elites_repertoire(
             centroids=centroids,
+            # WAS ["moqd_score"][-1]
             repertoire_fitnesses=metrics["moqd_score"][-1],
             minval=self.minval,
             maxval=self.maxval,
@@ -217,7 +212,7 @@ class RunMOME:
         plt.show()
 
     
-    def plot_scores(
+    def plot_scores_evolution(
         self,
         metrics_history: Dict,
         episode_length: int = 1,
@@ -236,7 +231,7 @@ class RunMOME:
 
         plt.show()
 
-    def plot_max_scores(
+    def plot_max_scores_evolution(
         self,
         metrics_history: Dict,
         episode_length: int = 1,
