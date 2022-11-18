@@ -10,8 +10,8 @@ episode_length: 100
 
 # Initialisation parameters
 init_batch_size: 100
-batch_size: 256 
-num_evaluations: 25600
+batch_size: 100 
+num_evaluations: 1000000
 num_init_cvt_samples: 50000 
 num_centroids: 1024 
 

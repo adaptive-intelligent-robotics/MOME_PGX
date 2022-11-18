@@ -47,6 +47,7 @@ class ExperimentConfig:
     num_evaluations: int
     num_centroids: int
     num_init_cvt_samples: int
+    num_objective_functions: int
 
     # Rastrigin parameters
     num_param_dimensions: int
@@ -63,7 +64,13 @@ class ExperimentConfig:
     proportion_var_to_change: float
     crossover_percentage: float
 
-
+    # Logging parameters
+    metrics_log_period: int
+    plot_repertoire_period: int
+    checkpoint_period: int
+    save_checkpoint_visualisations: bool
+    save_final_visualisations: bool
+    num_save_visualisations: int
 
 def rastrigin_scorer(
     genotypes: jnp.ndarray, 
@@ -107,12 +114,12 @@ def main(config: ExperimentConfig) -> None:
     random_key = jax.random.PRNGKey(config.seed)
     random_key, subkey = jax.random.split(random_key)
 
-    # Initialise genotype
+    # Initialise genotypes
     init_genotypes = jax.random.uniform(
     subkey, 
-    (self.init_batch_size, self.num_param_dimensions), 
-    minval=self.minval, 
-    maxval=self.maxval, 
+    (config.init_batch_size, config.num_param_dimensions), 
+    minval=config.minval, 
+    maxval=config.maxval, 
     dtype=jnp.float32
     )
 
@@ -159,27 +166,33 @@ def main(config: ExperimentConfig) -> None:
         return fitnesses, descriptors, {}, random_key
 
     # Instantiate MOME
-    mome = RunMOME(pareto_front_max_length=config.pareto_front_max_length,
-                 num_param_dimensions=config.num_param_dimensions,
-                 num_descriptor_dimensions=config.num_descriptor_dimensions,
-                 minval=config.minval,
-                 maxval=config.maxval,
-                 num_iterations=num_iterations, 
-                 num_centroids=config.num_centroids,
-                 num_init_cvt_samples=config.num_init_cvt_samples,
-                 init_batch_size=config.init_batch_size,
-                 batch_size=config.batch_size, 
-                 scoring_fn=scoring_fn,
-                 emitter=mixing_emitter,
-                 metrics_fn=metrics_function,
-                 metrics_log_period=config.metrics_log_period)
+    mome = RunMOME(
+                pareto_front_max_length=config.pareto_front_max_length,
+                num_param_dimensions=config.num_param_dimensions,
+                num_descriptor_dimensions=config.num_descriptor_dimensions,
+                minval=config.minval,
+                maxval=config.maxval,
+                num_iterations=num_iterations, 
+                num_centroids=config.num_centroids,
+                num_init_cvt_samples=config.num_init_cvt_samples,
+                init_batch_size=config.init_batch_size,
+                batch_size=config.batch_size, 
+                episode_length=config.episode_length,
+                scoring_fn=scoring_fn,
+                emitter=mixing_emitter,
+                metrics_fn=metrics_function,
+                num_objective_functions=config.num_objective_functions,
+                metrics_log_period=config.metrics_log_period,
+                plot_repertoire_period=config.plot_repertoire_period,
+                checkpoint_period=config.checkpoint_period,
+                save_checkpoint_visualisations=config.save_checkpoint_visualisations,
+                save_final_visualisations=config.save_final_visualisations,
+                num_save_visualisations=config.num_save_visualisations,
+    ) 
 
     # Run MOME and plot results
-    repertoire, centroids, random_key, metrics, metrics_history = mome.run(random_key, init_genotypes)
+    mome.run(random_key, init_genotypes)
 
-    mome.plot_final_repertoire(repertoire, centroids, metrics)
-    mome.plot_scores(metrics_history)
-    mome.plot_max_scores(metrics_history)
 
 
 

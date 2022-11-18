@@ -30,7 +30,6 @@ from qdax.utils.plotting import (
     plot_2d_map_elites_repertoire, 
     plot_map_elites_results,
 )
-from qdax.utils.metrics import CSVLogger, default_moqd_metrics
 
 
 class RunPGA:
@@ -156,16 +155,19 @@ class RunPGA:
         logger.warning("--- Initialised initial repertoire ---")
         logger.warning("--- Starting the algorithm main process ---")
 
-        timings = {"initial_repertoire_time": initial_repertoire_time,
-                    "centroids_init_time": centroids_init_time,
-                    "runtime_logs": jnp.zeros([(num_loops)+1, 1]),
-                    "avg_iteration_time": 0.0,
-                    "avg_evalps": 0.0}
+        timings = {
+            "initial_repertoire_time": initial_repertoire_time,
+            "centroids_init_time": centroids_init_time,
+            "runtime_logs": jnp.zeros([(num_loops)+1, 1]),
+            "avg_iteration_time": 0.0,
+            "avg_evalps": 0.0
+        }
        
         metrics_history = {
-                "qd_score": jnp.array([0.0]), 
-                "max_fitness": jnp.array([0.0]),  
-                "coverage": jnp.array([0.0])}
+            "qd_score": jnp.array([0.0]), 
+            "max_fitness": jnp.array([0.0]),  
+            "coverage": jnp.array([0.0])
+        }
 
         logger.warning(f"--- Running PGA for {num_loops} loops ---")
         
@@ -175,7 +177,7 @@ class RunPGA:
             logger.warning(f"------ Iteration {iteration} out of {self.num_iterations} ------")
             start_time = time.time()
 
-            # Log period number of QD itertions
+            # 'Log period' number of QD itertions
             (repertoire, emitter_state, random_key,), metrics = jax.lax.scan(
                 map_elites.scan_update,
                 (repertoire, emitter_state, random_key),
@@ -246,7 +248,7 @@ class RunPGA:
             pickle.dump(timings, f)
 
         with open(os.path.join(final_metrics_dir, "final_metrics.pkl"), 'wb') as f:
-            pickle.dump(final_metrics_dir, f)
+            pickle.dump(metrics, f)
         
         
         # Save final repertoire
