@@ -13,25 +13,27 @@ From: airl_lab/default/airl_env:qdax_f57720d0
 %post
    export LD_LIBRARY_PATH="/workspace/lib:$LD_LIBRARY_PATH"
    apt-get update -y
+   DEBIAN_FRONTEND=noninteractive apt-get install -y python3-git python3-matplotlib python3-pip libsdl1.2-dev libomp-dev
    pip3 install --upgrade pip
+   pip3 install brax==0.0.15
 
    apt-get install -y python3-tk
 
    # Create working directory
-   mkdir -p /git/exp/qdax/
+   mkdir -p /git/exp/mooqd
 
    #==================================================================================
    exit 0 #NOTFORFINAL - the lines below this "exit" will be executed only when building the final image
    #==================================================================================
 
    # Enter working directory
-   cd /git/exp/
+   cd /git/exp/mooqd
 
    #CLONEHERE
 
 %runscript
    # Entering directory
-   cd /git/exp/qdax/
+   cd /git/exp/mooqd
 
    # Running the test file as a demo
    echo
