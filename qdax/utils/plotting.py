@@ -820,7 +820,7 @@ def plot_mome_scores_evolution(
         mpl.rcParams["axes.titlepad"] = 10
 
         # Visualize the training evolution and final repertoire
-        x_range = jnp.arange(num_iterations) * episode_length * batch_size
+        x_range = jnp.arange(num_iterations + 1) * episode_length * batch_size
 
         if episode_length != 1:
             x_label = "Environment steps"
@@ -868,7 +868,7 @@ def plot_mome_max_scores_evolution(
         mpl.rcParams["axes.titlepad"] = 10
 
         # Visualize the training evolution and final repertoire
-        x_range = jnp.arange(num_iterations) * episode_length * batch_size
+        x_range = jnp.arange(num_iterations + 1) * episode_length * batch_size
 
         if episode_length != 1:
             x_label = "Environment steps"
