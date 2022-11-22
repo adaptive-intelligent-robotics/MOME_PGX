@@ -86,4 +86,4 @@ def visualise_individual(
         state = jit_env_step(state, action)
 
     with File(path, 'w') as fout:
-        fout.write(html.render(env.sys, [s.qp for s in rollout[:500]], height=480))
+        fout.write(html.render(env.sys, [s.qp for s in rollout], height=480))
