@@ -38,7 +38,6 @@ class RunMOME:
     """
     Args:
         pareto_front_max_length: max number of solutions per cell/in each pareto front
-        num_param_dimensions: dimensionality of solution genotype
         num_descriptor_dimensions: dimensionality of solution BD
         minval: minimum value of BD
         maxval: maximum value of BD
@@ -53,7 +52,6 @@ class RunMOME:
 
     def __init__(self,
                 pareto_front_max_length: int,
-                num_param_dimensions: int,
                 num_descriptor_dimensions: int,
                 minval: int,
                 maxval: int,
@@ -75,7 +73,6 @@ class RunMOME:
         ):
 
         self.pareto_front_max_length = pareto_front_max_length
-        self.num_param_dimensions = num_param_dimensions
         self.num_descriptor_dimensions = num_descriptor_dimensions
         self.minval = minval
         self.maxval = maxval

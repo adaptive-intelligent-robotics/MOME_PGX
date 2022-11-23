@@ -168,7 +168,6 @@ def main(config: ExperimentConfig) -> None:
     # Instantiate MOME
     mome = RunMOME(
                 pareto_front_max_length=config.pareto_front_max_length,
-                num_param_dimensions=config.num_param_dimensions,
                 num_descriptor_dimensions=config.num_descriptor_dimensions,
                 minval=config.minval,
                 maxval=config.maxval,
