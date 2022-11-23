@@ -107,27 +107,27 @@ class RunMOME:
         output_dir = "./" 
 
         # Name save directories
-        repertoire_plots_save_dir = os.path.join(output_dir, "checkpoints", "repertoires", "plots")
-        metrics_dir = os.path.join(output_dir, "checkpoints")
-        final_metrics_dir = os.path.join(output_dir, "final", "metrics")
-        final_plots_dir = os.path.join(output_dir, "final", "plots")
-        final_repertoire_dir = os.path.join(output_dir, "final", "repertoire/")
+        _repertoire_plots_save_dir = os.path.join(output_dir, "checkpoints", "repertoires", "plots")
+        _metrics_dir = os.path.join(output_dir, "checkpoints")
+        _final_metrics_dir = os.path.join(output_dir, "final", "metrics")
+        _final_plots_dir = os.path.join(output_dir, "final", "plots")
+        _final_repertoire_dir = os.path.join(output_dir, "final", "repertoire/")
 
         # Create save directories
-        os.makedirs(repertoire_plots_save_dir, exist_ok=True)
-        os.makedirs(metrics_dir, exist_ok=True)
-        os.makedirs(final_metrics_dir, exist_ok=True)
-        os.makedirs(final_plots_dir, exist_ok=True)
-        os.makedirs(final_repertoire_dir, exist_ok=True)
+        os.makedirs(_repertoire_plots_save_dir, exist_ok=True)
+        os.makedirs(_metrics_dir, exist_ok=True)
+        os.makedirs(_final_metrics_dir, exist_ok=True)
+        os.makedirs(_final_plots_dir, exist_ok=True)
+        os.makedirs(_final_repertoire_dir, exist_ok=True)
 
         # Create visualisation directories
         if self.save_checkpoint_visualisations:
-            visualisations_save_dir = os.path.join(output_dir, "checkpoints", "repertoires", "visualisations")
-            os.makedirs(visualisations_save_dir)
+            _visualisations_save_dir = os.path.join(output_dir, "checkpoints", "repertoires", "visualisations")
+            os.makedirs(_visualisations_save_dir)
             
         if self.save_final_visualisations:
-            final_visualisation_dir = os.path.join(output_dir, "final", "visualisations")
-            os.makedirs(final_visualisation_dir)
+            _final_visualisation_dir = os.path.join(output_dir, "final", "visualisations")
+            os.makedirs(_final_visualisation_dir)
 
         # Instantiate MOME
         mome = MOME(
@@ -225,18 +225,18 @@ class RunMOME:
                     repertoire,
                     centroids,
                     metrics,
-                    save_dir=repertoire_plots_save_dir,
+                    save_dir=_repertoire_plots_save_dir,
                     save_name=f"{iteration}",
                 )
             
             # Save latest repertoire and metrics every 'checkpoint_period' iterations
             if iteration % self.checkpoint_period == 0:
-                repertoire.save(path=final_repertoire_dir)
+                repertoire.save(path=_final_repertoire_dir)
                     
-                with open(os.path.join(metrics_dir, "metrics_history.pkl"), 'wb') as f:
+                with open(os.path.join(_metrics_dir, "metrics_history.pkl"), 'wb') as f:
                     pickle.dump(metrics_history, f)
 
-                with open(os.path.join(metrics_dir, "timings.pkl"), 'wb') as f:
+                with open(os.path.join(_metrics_dir, "timings.pkl"), 'wb') as f:
                     pickle.dump(timings, f)
                 
                 if self.save_checkpoint_visualisations:
@@ -248,7 +248,7 @@ class RunMOME:
                         repertoire, 
                         self.num_save_visualisations,
                         iteration,
-                        save_dir=visualisations_save_dir,
+                        save_dir=_visualisations_save_dir,
                     )
 
         total_duration = time.time() - init_time
@@ -261,17 +261,17 @@ class RunMOME:
         logger.warning("Max Fitnesses:" + str(metrics['max_scores'][-1]))
 
         # Save metrics
-        with open(os.path.join(metrics_dir, "metrics_history.pkl"), 'wb') as f:
+        with open(os.path.join(_metrics_dir, "metrics_history.pkl"), 'wb') as f:
             pickle.dump(metrics_history, f)
 
-        with open(os.path.join(metrics_dir, "timings.pkl"), 'wb') as f:
+        with open(os.path.join(_metrics_dir, "timings.pkl"), 'wb') as f:
             pickle.dump(timings, f)
 
-        with open(os.path.join(final_metrics_dir, "final_metrics.pkl"), 'wb') as f:
+        with open(os.path.join(_final_metrics_dir, "final_metrics.pkl"), 'wb') as f:
             pickle.dump(metrics, f)
 
         # Save final repertoire
-        repertoire.save(path=final_repertoire_dir)
+        repertoire.save(path=_final_repertoire_dir)
 
         # Save visualisation of best repertoire
         if self.save_final_visualisations:
@@ -283,7 +283,7 @@ class RunMOME:
                 subkey,
                 repertoire, 
                 self.num_save_visualisations,
-                save_dir=final_visualisation_dir,
+                save_dir=_final_visualisation_dir,
             )
 
         # Save final plots
@@ -291,19 +291,19 @@ class RunMOME:
             repertoire,
             centroids,
             metrics,
-            save_dir=final_plots_dir,
+            save_dir=_final_plots_dir,
             save_name="final",
         )
 
         self.plot_scores_evolution(
             metrics_history,
-            save_dir=final_plots_dir
+            save_dir=_final_plots_dir
 
         )
 
         self.plot_max_scores_evolution(
             metrics_history,
-            save_dir=final_plots_dir
+            save_dir=_final_plots_dir
 
         )
 
