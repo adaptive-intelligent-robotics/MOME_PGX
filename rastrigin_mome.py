@@ -175,7 +175,6 @@ def main(config: ExperimentConfig) -> None:
                 num_iterations=num_iterations, 
                 num_centroids=config.num_centroids,
                 num_init_cvt_samples=config.num_init_cvt_samples,
-                init_batch_size=config.init_batch_size,
                 batch_size=config.batch_size, 
                 episode_length=config.episode_length,
                 scoring_fn=scoring_fn,
