@@ -25,8 +25,6 @@ class ExperimentConfig:
     episode_length: int
 
     # Initialisation parameters
-    init_batch_size: int
-    batch_size: int 
     num_evaluations: int
     num_init_cvt_samples: int
     num_centroids: int
@@ -73,7 +71,7 @@ class ExperimentConfig:
 @hydra.main(config_path="configs/brax/", config_name="brax_pga")
 def main(config: ExperimentConfig) -> None:
 
-    num_iterations = config.num_evaluations // config.batch_size
+    num_iterations = config.num_evaluations // config.env_batch_size
 
     # Init environment
     env = environments.create(config.env_name, episode_length=config.episode_length)
@@ -190,7 +188,6 @@ def main(config: ExperimentConfig) -> None:
         num_descriptor_dimensions=env.behavior_descriptor_length,
         minval=config.minval,
         maxval=config.maxval,
-        batch_size=config.batch_size, 
         scoring_fn=brax_scoring_function,
         pg_emitter=pg_emitter,
         episode_length=config.episode_length,
@@ -211,6 +208,7 @@ def main(config: ExperimentConfig) -> None:
         env,
         policy_network
     )
+
 
 
                                                       

@@ -9,8 +9,6 @@ env_name: walker2d_uni
 episode_length: 1000
 
 # Initialisation parameters
-init_batch_size: 100
-batch_size: 100 
 num_evaluations: 1000000
 num_init_cvt_samples: 50000 
 num_centroids: 1024 
@@ -18,7 +16,7 @@ num_centroids: 1024
 # Brax parameters
 num_param_dimensions: 
 num_descriptor_dimensions: 2
-policy_hidden_layer_sizes: [128, 128] 
+policy_hidden_layer_sizes: [64, 64] 
 minval: 0. 
 maxval: 1.
 

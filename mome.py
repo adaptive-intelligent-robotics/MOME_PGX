@@ -45,7 +45,6 @@ class RunMOME:
         num_iterations: number of MAP-Elites iterations to run
         num_centroids: number of cells in grid
         num_init_cvt_samples: number of sampled points to be used for clustering to determine centroids 
-        init_batch_size: initial population size
         batch_size: number of solutions to select and mutate in each MAP-Elites iteration
         scoring_fn: function that returns fitness and descriptor of a solution
         emitter: function determining variation mechanism of solutions
@@ -61,7 +60,6 @@ class RunMOME:
                 num_iterations: int, 
                 num_centroids: int,
                 num_init_cvt_samples: int,
-                init_batch_size: int,
                 batch_size: int, 
                 episode_length: int,
                 scoring_fn: Callable,

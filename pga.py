@@ -47,7 +47,6 @@ class RunPGA:
                 num_descriptor_dimensions: int,
                 minval: int,
                 maxval: int,
-                batch_size: int, 
                 scoring_fn: Callable,
                 pg_emitter: PGAMEEmitter,
                 episode_length: int,
@@ -67,7 +66,6 @@ class RunPGA:
         self.num_descriptor_dimensions = num_descriptor_dimensions
         self.minval = minval
         self.maxval = maxval
-        self.batch_size =  batch_size
         self.scoring_fn = scoring_fn
         self.pg_emitter = pg_emitter
         self.episode_length = episode_length
@@ -196,7 +194,7 @@ class RunPGA:
             logger.warning(f"--- Max Fitness: {metrics['max_fitness'][-1]:.4f}")
 
             timings["avg_iteration_time"] = (timings["avg_iteration_time"]*(i*self.metrics_log_period) + timelapse) / ((i+1)*self.metrics_log_period)
-            timings["avg_evalps"] = (timings["avg_evalps"]*(i*self.metrics_log_period) + ((self.batch_size*self.metrics_log_period)/timelapse)) / ((i+1)*self.metrics_log_period)
+            timings["avg_evalps"] = (timings["avg_evalps"]*(i*self.metrics_log_period) + ((self.env_batch_size*self.metrics_log_period)/timelapse)) / ((i+1)*self.metrics_log_period)
             timings["runtime_logs"] = timings["runtime_logs"].at[i, 0].set(total_algorithm_duration)
 
             # Save plot of repertoire every plot_repertoire_period iterations
@@ -236,7 +234,7 @@ class RunPGA:
         logger.warning("--- FINAL METRICS ---")
         logger.warning(f"Total duration: {total_duration:.2f}s")
         logger.warning(f"Main algorithm duration: {total_algorithm_duration:.2f}s")
-        logger.warning(f"Max fitness: {metrics['max_fitness'][-1]:.2f}%")
+        logger.warning(f"Max fitness: {metrics['max_fitness'][-1]:.2f}")
         logger.warning(f"QD Score: {metrics['qd_score'][-1]:.2f}")
         logger.warning(f"Coverage: {metrics['coverage'][-1]:.2f}%")
 
