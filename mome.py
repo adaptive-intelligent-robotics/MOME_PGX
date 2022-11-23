@@ -22,8 +22,9 @@ from qdax.core.emitters.mutation_operators import (
     polynomial_crossover, 
 )
 from qdax.core.emitters.standard_emitters import MixingEmitter
+from qdax.environments.base_wrappers import QDEnv
 from qdax.core.mome import MOME, MOMERepertoire
-from qdax.types import Fitness, Descriptor, RNGKey, ExtraScores
+from qdax.types import Fitness, Descriptor, RNGKey, ExtraScores, Genotype, Centroid
 from qdax.utils.plotting import ( 
     plot_2d_map_elites_repertoire, 
     plot_mome_max_scores_evolution,
@@ -99,8 +100,9 @@ class RunMOME:
 
     def run(self,
             random_key: RNGKey,
-            init_genotypes: jnp.ndarray,
-            ) -> Tuple[MOMERepertoire, jnp.ndarray, RNGKey]:
+            init_genotypes: Genotype,
+            env: Optional[QDEnv]=None,
+    ) -> Tuple[MOMERepertoire, Genotype, RNGKey]:
             
         # Set up logging functions 
         num_loops = self.num_iterations // self.metrics_log_period
@@ -316,7 +318,7 @@ class RunMOME:
     def plot_repertoire(
         self,
         repertoire: MOMERepertoire,
-        centroids: jnp.ndarray,
+        centroids: Centroid,
         metrics: Dict,
         save_dir: str="./",
         save_name: str="",
@@ -371,7 +373,7 @@ class RunMOME:
         self,
         metrics_history: Dict,
         save_dir: str="./",
-    ):
+    ) -> None:
 
         fig, axes = plt.subplots(figsize=(18, 6), ncols=3)
 

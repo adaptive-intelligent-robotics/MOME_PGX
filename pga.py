@@ -25,7 +25,8 @@ from qdax.core.emitters.pga_me_emitter import PGAMEEmitter
 from qdax.core.map_elites import MAPElites
 from qdax.core.mome import MOME, MOMERepertoire
 from qdax.core.neuroevolution.networks.networks import MLP
-from qdax.types import Fitness, Descriptor, RNGKey, ExtraScores
+from qdax.environments.base_wrappers import QDEnv
+from qdax.types import Fitness, Descriptor, RNGKey, ExtraScores, Genotype, Centroid
 from qdax.utils.plotting import ( 
     plot_2d_map_elites_repertoire, 
     plot_map_elites_results,
@@ -82,8 +83,8 @@ class RunPGA:
 
     def run(self,
             random_key: RNGKey,
-            init_population: Any,
-            env: Optional[Any]=None,
+            init_population: Genotype,
+            env: Optional[QDEnv]=None,
             policy_network: Optional[MLP]=None,
             ) -> Tuple[MOMERepertoire, jnp.ndarray, RNGKey]:
 
@@ -95,27 +96,27 @@ class RunPGA:
         output_dir = "./" 
 
         # Name save directories
-        repertoire_plots_save_dir = os.path.join(output_dir, "checkpoints", "repertoires", "plots")
-        metrics_dir = os.path.join(output_dir, "checkpoints")
-        final_metrics_dir = os.path.join(output_dir, "final", "metrics")
-        final_plots_dir = os.path.join(output_dir, "final", "plots")
-        final_repertoire_dir = os.path.join(output_dir, "final", "repertoire/")
+        _repertoire_plots_save_dir = os.path.join(output_dir, "checkpoints", "repertoires", "plots")
+        _metrics_dir = os.path.join(output_dir, "checkpoints")
+        _final_metrics_dir = os.path.join(output_dir, "final", "metrics")
+        _final_plots_dir = os.path.join(output_dir, "final", "plots")
+        _final_repertoire_dir = os.path.join(output_dir, "final", "repertoire/")
 
         # Create save directories
-        os.makedirs(repertoire_plots_save_dir, exist_ok=True)
-        os.makedirs(metrics_dir, exist_ok=True)
-        os.makedirs(final_metrics_dir, exist_ok=True)
-        os.makedirs(final_plots_dir, exist_ok=True)
-        os.makedirs(final_repertoire_dir, exist_ok=True)
+        os.makedirs(_repertoire_plots_save_dir, exist_ok=True)
+        os.makedirs(_metrics_dir, exist_ok=True)
+        os.makedirs(_final_metrics_dir, exist_ok=True)
+        os.makedirs(_final_plots_dir, exist_ok=True)
+        os.makedirs(_final_repertoire_dir, exist_ok=True)
 
         # Create visualisation directories
         if self.save_checkpoint_visualisations:
-            visualisations_save_dir = os.path.join(output_dir, "checkpoints", "repertoires", "visualisations")
-            os.makedirs(visualisations_save_dir)
+            _visualisations_save_dir = os.path.join(output_dir, "checkpoints", "repertoires", "visualisations")
+            os.makedirs(_visualisations_save_dir)
             
         if self.save_final_visualisations:
-            final_visualisation_dir = os.path.join(output_dir, "final", "visualisations")
-            os.makedirs(final_visualisation_dir)
+            _final_visualisation_dir = os.path.join(output_dir, "final", "visualisations")
+            os.makedirs(_final_visualisation_dir)
 
         # Instantiate MAP Elites
         map_elites = MAPElites(
@@ -203,18 +204,18 @@ class RunPGA:
                 self.plot_repertoire(
                     repertoire,
                     centroids,
-                    save_dir=repertoire_plots_save_dir,
+                    save_dir=_repertoire_plots_save_dir,
                     save_name=f"{iteration}",
                 )
     
             # Save latest repertoire and metrics every 'checkpoint_period' iterations
             if iteration % self.checkpoint_period == 0:
-                repertoire.save(path=final_repertoire_dir)
+                repertoire.save(path=_final_repertoire_dir)
                     
-                with open(os.path.join(metrics_dir, "metrics_history.pkl"), 'wb') as f:
+                with open(os.path.join(_metrics_dir, "metrics_history.pkl"), 'wb') as f:
                     pickle.dump(metrics_history, f)
 
-                with open(os.path.join(metrics_dir, "timings.pkl"), 'wb') as f:
+                with open(os.path.join(_metrics_dir, "timings.pkl"), 'wb') as f:
                     pickle.dump(timings, f)
                 
                 if self.save_checkpoint_visualisations:
@@ -226,11 +227,10 @@ class RunPGA:
                         repertoire, 
                         self.num_save_visualisations,
                         iteration,
-                        save_dir=visualisations_save_dir,
+                        save_dir=_visualisations_save_dir,
                     )
         
 
-        print("REPERTOIRE TYPE:", type(repertoire))
         total_duration = time.time() - init_time
 
         logger.warning("--- FINAL METRICS ---")
@@ -241,18 +241,18 @@ class RunPGA:
         logger.warning(f"Coverage: {metrics['coverage'][-1]:.2f}%")
 
         # Save metrics
-        with open(os.path.join(metrics_dir, "metrics_history.pkl"), 'wb') as f:
+        with open(os.path.join(_metrics_dir, "metrics_history.pkl"), 'wb') as f:
             pickle.dump(metrics_history, f)
 
-        with open(os.path.join(metrics_dir, "timings.pkl"), 'wb') as f:
+        with open(os.path.join(_metrics_dir, "timings.pkl"), 'wb') as f:
             pickle.dump(timings, f)
 
-        with open(os.path.join(final_metrics_dir, "final_metrics.pkl"), 'wb') as f:
+        with open(os.path.join(_final_metrics_dir, "final_metrics.pkl"), 'wb') as f:
             pickle.dump(metrics, f)
         
         
         # Save final repertoire
-        repertoire.save(path=final_repertoire_dir)
+        repertoire.save(path=_final_repertoire_dir)
 
         # Save visualisation of best repertoire
         if self.save_final_visualisations:
@@ -264,27 +264,27 @@ class RunPGA:
                 subkey,
                 repertoire, 
                 self.num_save_visualisations,
-                save_dir=final_visualisation_dir,
+                save_dir=_final_visualisation_dir,
             )
 
         # Save final plots 
         self.plot_scores_evolution(
             repertoire,
             metrics_history,
-            save_dir=final_plots_dir
+            save_dir=_final_plots_dir
         )
 
         self.plot_repertoire(
             repertoire,
             centroids,
-            save_dir=final_plots_dir,
+            save_dir=_final_plots_dir,
             save_name="final",
         )
 
     
     def plot_scores_evolution(
         self,
-        repertoire: Any,
+        repertoire: MapElitesRepertoire,
         metrics_history: Dict,
         save_dir: str="./",
     ) -> None:
@@ -305,7 +305,7 @@ class RunPGA:
     def plot_repertoire(
         self,
         repertoire: MapElitesRepertoire,
-        centroids: jnp.ndarray,
+        centroids: Centroid,
         save_dir: str="./",
         save_name: str="",
     ) -> None:

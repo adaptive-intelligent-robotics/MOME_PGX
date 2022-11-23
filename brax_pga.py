@@ -77,8 +77,6 @@ def main(config: ExperimentConfig) -> None:
 
     # Init environment
     env = environments.create(config.env_name, episode_length=config.episode_length)
-
-    print("ENV TYPE:", env)
     
     # Init a random key
     random_key = jax.random.PRNGKey(config.seed)
@@ -97,7 +95,7 @@ def main(config: ExperimentConfig) -> None:
     fake_batch = jnp.zeros(shape=(config.env_batch_size, env.observation_size))
     init_genotypes = jax.vmap(policy_network.init)(keys, fake_batch)
 
-    # Create the initial environment states
+    # Create the initial environment states (same initial state for each individual in env_batch)
     random_key, subkey = jax.random.split(random_key)
     keys = jnp.repeat(jnp.expand_dims(subkey, axis=0), repeats=config.env_batch_size, axis=0)
     reset_fn = jax.jit(jax.vmap(env.reset))
@@ -105,7 +103,7 @@ def main(config: ExperimentConfig) -> None:
 
     # TO DO: save init_state
 
-    # Define the fonction to play a step with the policy in the environment
+    # Define the function to play a step with the policy in the environment
     def play_step_fn(
         env_state,
         policy_params,
@@ -206,7 +204,6 @@ def main(config: ExperimentConfig) -> None:
         num_save_visualisations=config.num_save_visualisations,
     )
 
-    print("GENTOYPES TYPE:", type(init_genotypes))
 
     repertoire = pga.run(
         random_key, 
@@ -216,10 +213,6 @@ def main(config: ExperimentConfig) -> None:
     )
 
 
-
-    
-
-
-                                                                
+                                                      
 if __name__ == '__main__':
     main()
