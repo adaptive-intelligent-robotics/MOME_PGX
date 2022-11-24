@@ -22,8 +22,9 @@ from qdax.core.emitters.mutation_operators import (
     polynomial_crossover, 
 )
 from qdax.core.emitters.standard_emitters import MixingEmitter
-from qdax.environments.base_wrappers import QDEnv
 from qdax.core.mome import MOME, MOMERepertoire
+from qdax.core.neuroevolution.networks.networks import MLP
+from qdax.environments.base_wrappers import QDEnv
 from qdax.types import Fitness, Descriptor, RNGKey, ExtraScores, Genotype, Centroid
 from qdax.utils.plotting import ( 
     plot_2d_map_elites_repertoire, 
@@ -97,6 +98,7 @@ class RunMOME:
             random_key: RNGKey,
             init_genotypes: Genotype,
             env: Optional[QDEnv]=None,
+            policy_network: Optional[MLP]=None,
     ) -> Tuple[MOMERepertoire, Genotype, RNGKey]:
             
         # Set up logging functions 
