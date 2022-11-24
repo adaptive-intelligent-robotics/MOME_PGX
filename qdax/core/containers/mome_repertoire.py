@@ -175,10 +175,6 @@ class MOMERepertoire(MapElitesRepertoire):
         num_criteria = new_batch_of_fitnesses.shape[1]
 
         pareto_front_len = pareto_front_fitnesses.shape[0]  # type: ignore
-
-        first_leaf = jax.tree_util.tree_leaves(new_batch_of_genotypes)[0]
-        genotypes_dim = first_leaf.shape[1]
-
         descriptors_dim = new_batch_of_descriptors.shape[1]
 
         # gather all data
@@ -233,14 +229,11 @@ class MOMERepertoire(MapElitesRepertoire):
         front_size = len(pareto_front_fitnesses)  # type: ignore
         new_front_fitness = new_front_fitness[:front_size, :]
 
-        genotypes_mask = jnp.repeat(
-            jnp.expand_dims(new_mask, axis=-1), genotypes_dim, axis=-1
+        new_front_genotypes = jax.tree_util.tree_map(
+            lambda x: x * new_mask_indices[0], new_front_genotypes
         )
         new_front_genotypes = jax.tree_util.tree_map(
-            lambda x: x * genotypes_mask, new_front_genotypes
-        )
-        new_front_genotypes = jax.tree_util.tree_map(
-            lambda x: x[:front_size, :], new_front_genotypes
+            lambda x: x[:front_size], new_front_genotypes
         )
 
         descriptors_mask = jnp.repeat(
@@ -278,7 +271,6 @@ class MOMERepertoire(MapElitesRepertoire):
         Returns:
             The updated repertoire with potential new individuals.
         """
-
         # get the indices that corresponds to the descriptors in the repertoire
         batch_of_indices = get_cells_indices(batch_of_descriptors, self.centroids)
         batch_of_indices = jnp.expand_dims(batch_of_indices, axis=-1)
@@ -292,11 +284,13 @@ class MOMERepertoire(MapElitesRepertoire):
 
             index = index.astype(jnp.int32)
 
-            # get cell data
-            cell_genotype = jax.tree_util.tree_map(lambda x: x[index], carry.genotypes)
-            cell_fitness = carry.fitnesses[index]
-            cell_descriptor = carry.descriptors[index]
+            # get current repertoire cell data
+            cell_genotype = jax.tree_util.tree_map(lambda x: x[index][0], carry.genotypes)
+            cell_fitness = carry.fitnesses[index][0]
+            cell_descriptor = carry.descriptors[index][0]
             cell_mask = jnp.any(cell_fitness == -jnp.inf, axis=-1)
+
+            new_genotypes = jax.tree_util.tree_map(lambda x: jnp.expand_dims(x, axis=0), genotype)
 
             # update pareto front
             (
@@ -305,12 +299,12 @@ class MOMERepertoire(MapElitesRepertoire):
                 cell_descriptor,
                 cell_mask,
             ) = self._update_masked_pareto_front(
-                pareto_front_fitnesses=cell_fitness.squeeze(axis=0),
-                pareto_front_genotypes=cell_genotype.squeeze(axis=0),
-                pareto_front_descriptors=cell_descriptor.squeeze(axis=0),
-                mask=cell_mask.squeeze(axis=0),
+                pareto_front_fitnesses=cell_fitness,
+                pareto_front_genotypes=cell_genotype,
+                pareto_front_descriptors=cell_descriptor,
+                mask=cell_mask,
                 new_batch_of_fitnesses=jnp.expand_dims(fitness, axis=0),
-                new_batch_of_genotypes=jnp.expand_dims(genotype, axis=0),
+                new_batch_of_genotypes=new_genotypes,
                 new_batch_of_descriptors=jnp.expand_dims(descriptors, axis=0),
                 new_mask=jnp.zeros(shape=(1,), dtype=bool),
             )
@@ -393,7 +387,7 @@ class MOMERepertoire(MapElitesRepertoire):
                     num_centroids,
                     pareto_front_max_length,
                 )
-                + x.shape[1:]
+                + x.shape[1:] # Use [1:] as first dimension is batch size (so ignore this)
             ),
             genotypes,
         )
