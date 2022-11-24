@@ -1,4 +1,5 @@
 import jax.numpy as jnp
+import numpy as np
 import jax
 import os
 
@@ -8,6 +9,7 @@ from brax.io.json import dumps
 from IPython.display import HTML
 from qdax.types import RNGKey
 from qdax.core.containers.mapelites_repertoire import MapElitesRepertoire
+from qdax.core.containers.mome_repertoire import MOMERepertoire
 
 
 def save_samples(
@@ -61,6 +63,55 @@ def save_samples(
         )
         
 
+def save_mo_samples(
+    env,
+    policy_network,
+    random_key: RNGKey,
+    repertoire: MOMERepertoire,
+    num_save_visualisations: int,
+    iteration: str="final",
+    save_dir: str="./",
+):
+    """ Select best individual and some random individuals from repertoire and visualise behaviour"""
+    number_individuals = len(repertoire.fitnesses)
+
+    # Visualise the best individual
+    """
+    best_indices = np.matrix.argmax(np.array(repertoire.fitnesses), axis = -1)
+    print("BEST INDICES:", best_indices)
+    for objective_fn, best_idx in enumerate(best_indices):
+        params = jax.tree_util.tree_map(
+            lambda x: x[best_idx],
+            repertoire.genotypes
+            )
+        
+        visualise_individual(
+            env,
+            policy_network,
+            params,
+            f"best_iteration_{iteration}_individual_{best_idx}_objective_fn{objective_fn+1}.html",
+            save_dir
+        )
+
+    print("DONE BEST INDIVIDUALS")
+    """
+
+    # create sampling probability for the cells
+    sampled_genotypes, _ = repertoire.sample(random_key, num_save_visualisations)
+
+    for sample in range(num_save_visualisations):
+        params = jax.tree_util.tree_map(
+            lambda x: x[sample],
+            sampled_genotypes
+        )
+
+        visualise_individual(
+            env,
+            policy_network,
+            params,
+            f"iteration_{iteration}_sample_{sample}.html",
+            save_dir
+        )
 
 def visualise_individual(
     env,
