@@ -243,7 +243,7 @@ class RunMOME:
                 
                 if self.save_checkpoint_visualisations:
                     random_key, subkey = jax.random.split(random_key)
-                    visu_brax.save_samples(
+                    visu_brax.save_mo_samples(
                         env,
                         policy_network,
                         subkey,
@@ -279,7 +279,7 @@ class RunMOME:
         if self.save_final_visualisations:
             random_key, subkey = jax.random.split(random_key)
             
-            visu_brax.save_samples(
+            visu_brax.save_mo_samples(
                 env,                       
                 policy_network,
                 subkey,
