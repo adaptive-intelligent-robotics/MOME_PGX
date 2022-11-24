@@ -9,9 +9,11 @@ from qdax.environments.bd_extractors import (
     get_feet_contact_proportion,
     get_final_xy_position,
 )
+from qdax.environments.episode_wrappers import CustomEpisodeWrapper
 from qdax.environments.exploration_wrappers import MazeWrapper, TrapWrapper
 from qdax.environments.locomotion_wrappers import (
     FeetContactWrapper,
+    MultiObjectiveRewardWrapper,
     NoForwardRewardWrapper,
     XYPositionWrapper,
 )
@@ -32,6 +34,11 @@ reward_offset = {
     "halfcheetah_uni": 9.231,
     "hopper_uni": 0.9,
     "walker2d_uni": 1.413,
+    "ant_multi": [0.0, 3.24],
+    "humanoid_multi": [0.0, 0.0],
+    "halfcheetah_multi": [0.0, 9.231],
+    "hopper_multi": [0.0, 0.9],
+    "walker2d_multi": [0.0, 1.413]
 }
 
 behavior_descriptor_extractor = {
@@ -46,6 +53,11 @@ behavior_descriptor_extractor = {
     "halfcheetah_uni": get_feet_contact_proportion,
     "hopper_uni": get_feet_contact_proportion,
     "walker2d_uni": get_feet_contact_proportion,
+    "ant_multi": get_feet_contact_proportion,
+    "humanoid_multi": get_feet_contact_proportion,
+    "halfcheetah_multi": get_feet_contact_proportion,
+    "hopper_multi": get_feet_contact_proportion,
+    "walker2d_multi": get_feet_contact_proportion,
 }
 
 _qdax_envs = {
@@ -78,7 +90,11 @@ _qdax_custom_envs = {
         "wrappers": [XYPositionWrapper, NoForwardRewardWrapper],
         "kwargs": [{"minval": [-30.0, -30.0], "maxval": [30.0, 30.0]}, {}],
     },
-    "ant_uni": {"env": "ant", "wrappers": [FeetContactWrapper], "kwargs": [{}, {}]},
+    "ant_uni": {
+        "env": "ant", 
+        "wrappers": [FeetContactWrapper], 
+        "kwargs": [{}, {}]
+    },
     "humanoid_uni": {
         "env": "humanoid",
         "wrappers": [FeetContactWrapper],
@@ -97,6 +113,31 @@ _qdax_custom_envs = {
     "walker2d_uni": {
         "env": "walker2d",
         "wrappers": [FeetContactWrapper],
+        "kwargs": [{}, {}],
+    },
+    "ant_multi": {
+        "env": "ant", 
+        "wrappers": [MultiObjectiveRewardWrapper, FeetContactWrapper], 
+        "kwargs": [{}, {}]
+    },
+    "humanoid_multi": {
+        "env": "humanoid",
+        "wrappers": [MultiObjectiveRewardWrapper, FeetContactWrapper],
+        "kwargs": [{}, {}],
+    },
+    "halfcheetah_multi": {
+        "env": "halfcheetah",
+        "wrappers": [FeetContactWrapper, MultiObjectiveRewardWrapper],
+        "kwargs": [{}, {}],
+    },
+    "hopper_multi": {
+        "env": "hopper",
+        "wrappers": [FeetContactWrapper, MultiObjectiveRewardWrapper],
+        "kwargs": [{}, {}],
+    },
+    "walker2d_multi": {
+        "env": "walker2d",
+        "wrappers": [FeetContactWrapper, MultiObjectiveRewardWrapper],
         "kwargs": [{}, {}],
     },
 }

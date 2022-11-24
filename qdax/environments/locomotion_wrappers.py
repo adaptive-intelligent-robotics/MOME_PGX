@@ -284,10 +284,10 @@ class XYPositionWrapper(QDEnv):
 # name of the forward/velocity reward
 FORWARD_REWARD_NAMES = {
     "ant": "reward_forward",
-    "halfcheetah": "reward_forward",
+    "halfcheetah": "reward_run",
     "walker2d": "reward_forward",
     "hopper": "reward_forward",
-    "humanoid": "reward_linvel",
+    "humanoid": "forward_reward",
 }
 
 
@@ -331,3 +331,46 @@ class NoForwardRewardWrapper(Wrapper):
         # update the reward (remove forward_reward)
         new_reward = state.reward - state.metrics[self._fd_reward_field]
         return state.replace(reward=new_reward)  # type: ignore
+
+
+MINIMISE_ENERGY_REWARD_NAMES = {
+    "ant": "reward_ctrl",
+    "halfcheetah": "reward_ctrl",
+    "walker2d": "reward_ctrl",
+    "hopper": "reward_ctrl",
+    "humanoid": "reward_quadctrl",
+}
+
+class MultiObjectiveRewardWrapper(Wrapper):
+    """Wraps gym environments and replaces reward with multi-objective rewards.
+
+    Utilisation is simple: create an environment with Brax, pass
+    it to the wrapper with the name of the environment, and it will
+    work like before and will simply use forward reward and negative energy as rewards.
+    """
+
+    def __init__(self, env: Env, env_name: str) -> None:
+        if env_name not in (FORWARD_REWARD_NAMES.keys() and MINIMISE_ENERGY_REWARD_NAMES.keys()):
+            raise NotImplementedError(f"This wrapper does not support {env_name} yet.")
+        super().__init__(env)
+        self._env_name = env_name
+        self._fd_reward_field = FORWARD_REWARD_NAMES[env_name]
+        self._minimise_energy_reward_field = MINIMISE_ENERGY_REWARD_NAMES[env_name]
+
+    @property
+    def name(self) -> str:
+        return self._env_name
+
+    def reset(self, rng: jp.ndarray) -> State:
+        state = self.env.reset(rng)
+        new_reward = jp.zeros((2,))
+        return state.replace(reward=new_reward)
+
+    def step(self, state: State, action: jp.ndarray) -> State:
+        state = self.env.step(state, action)
+        new_reward = jnp.concatenate(
+            (jp.array((state.metrics[self._fd_reward_field],)), 
+            jp.array((state.metrics[self._minimise_energy_reward_field],))), 
+            axis=-1
+        )
+        return state.replace(reward=new_reward)  
