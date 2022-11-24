@@ -117,7 +117,7 @@ def main(config: ExperimentConfig) -> None:
     # Initialise genotypes
     init_genotypes = jax.random.uniform(
     subkey, 
-    (config.init_batch_size, config.num_param_dimensions), 
+    (config.batch_size, config.num_param_dimensions), 
     minval=config.minval, 
     maxval=config.maxval, 
     dtype=jnp.float32
