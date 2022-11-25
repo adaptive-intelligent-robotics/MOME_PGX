@@ -5,7 +5,7 @@ import jax
 from dataclasses import dataclass
 from functools import partial
 from typing import Tuple
-from pga import RunPGA
+from run_pga import RunPGA
 from qdax import environments
 from qdax.core.emitters.pga_me_emitter import PGAMEConfig, PGAMEEmitter
 from qdax.core.neuroevolution.mdp_utils import scoring_function

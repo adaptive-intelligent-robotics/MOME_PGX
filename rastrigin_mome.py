@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from functools import partial
 from hydra.core.config_store import ConfigStore
 from typing import Callable, Dict, Optional, Tuple
-from mome import RunMOME
+from run_mome import RunMOME
 from qdax.core.containers.mapelites_repertoire import compute_cvt_centroids, MapElitesRepertoire
 from qdax.core.emitters.emitter import Emitter
 from qdax.core.emitters.mutation_operators import (

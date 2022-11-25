@@ -5,7 +5,7 @@ import jax
 from dataclasses import dataclass
 from functools import partial
 from typing import Tuple
-from mome import RunMOME
+from run_mome import RunMOME
 from qdax import environments
 from qdax.core.emitters.mutation_operators import (
     polynomial_mutation, 
