@@ -9,7 +9,6 @@ from qdax.environments.bd_extractors import (
     get_feet_contact_proportion,
     get_final_xy_position,
 )
-from qdax.environments.episode_wrappers import CustomEpisodeWrapper
 from qdax.environments.exploration_wrappers import MazeWrapper, TrapWrapper
 from qdax.environments.locomotion_wrappers import (
     FeetContactWrapper,
