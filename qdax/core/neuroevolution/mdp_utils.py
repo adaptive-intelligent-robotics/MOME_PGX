@@ -325,6 +325,7 @@ def get_first_episode(transition: Transition) -> Transition:
         "episode_length",
         "play_step_fn",
         "behavior_descriptor_extractor",
+        "num_objective_functions",
     ),
 )
 def mo_scoring_function(
