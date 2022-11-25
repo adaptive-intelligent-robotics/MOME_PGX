@@ -103,6 +103,8 @@ class RunMOME:
             
         # Set up logging functions 
         num_loops = self.num_iterations // self.metrics_log_period
+        self.num_iterations = num_loops * self.metrics_log_period * self.batch_size #update true number of iterations
+
         logging.basicConfig(level=logging.DEBUG)
         logging.getLogger().handlers[0].setLevel(logging.INFO)
         logger = logging.getLogger(f"{__name__}")
