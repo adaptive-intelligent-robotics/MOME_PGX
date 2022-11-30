@@ -13,8 +13,8 @@ num_evaluations: 1000000
 num_init_cvt_samples: 50000 
 num_centroids: 1024 
 
-# Brax parameters
-num_param_dimensions: 
+# Brax parameters 
+num_objective_functions: 1
 num_descriptor_dimensions: 2
 policy_hidden_layer_sizes: [64, 64] 
 minval: 0. 

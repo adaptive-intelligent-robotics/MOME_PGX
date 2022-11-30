@@ -43,7 +43,8 @@ class Transition(flax.struct.PyTreeNode):
             the dimension of the transition once flattened.
 
         """
-        flatten_dim = 2 * self.observation_dim + self.action_dim + 3
+        flatten_dim = 2 * self.observation_dim + self.action_dim + self.reward_dim + 2
+
         return flatten_dim
 
     def flatten(self) -> jnp.ndarray:
@@ -55,7 +56,7 @@ class Transition(flax.struct.PyTreeNode):
             [
                 self.obs,
                 self.next_obs,
-                jnp.expand_dims(self.rewards, axis=-1),
+                self.rewards,
                 jnp.expand_dims(self.dones, axis=-1),
                 jnp.expand_dims(self.truncations, axis=-1),
                 self.actions,
@@ -84,17 +85,18 @@ class Transition(flax.struct.PyTreeNode):
         """
         obs_dim = transition.observation_dim
         action_dim = transition.action_dim
+        reward_dim = transition.reward_dim
         obs = flattened_transition[:, :obs_dim]
         next_obs = flattened_transition[:, obs_dim : (2 * obs_dim)]
-        rewards = jnp.ravel(flattened_transition[:, (2 * obs_dim) : (2 * obs_dim + 1)])
+        rewards = jnp.ravel(flattened_transition[:, (2 * obs_dim) : (2 * obs_dim + reward_dim)])
         dones = jnp.ravel(
-            flattened_transition[:, (2 * obs_dim + 1) : (2 * obs_dim + 2)]
+            flattened_transition[:, (2 * obs_dim + reward_dim) : (2 * obs_dim + reward_dim + 1)]
         )
         truncations = jnp.ravel(
-            flattened_transition[:, (2 * obs_dim + 2) : (2 * obs_dim + 3)]
+            flattened_transition[:, (2 * obs_dim + reward_dim + 1) : (2 * obs_dim + reward_dim + 2)]
         )
         actions = flattened_transition[
-            :, (2 * obs_dim + 3) : (2 * obs_dim + 3 + action_dim)
+            :, (2 * obs_dim + reward_dim + 2) : (2 * obs_dim + reward_dim + 2 + action_dim)
         ]
         return cls(
             obs=obs,
@@ -106,7 +108,7 @@ class Transition(flax.struct.PyTreeNode):
         )
 
     @classmethod
-    def init_dummy(cls, observation_dim: int, action_dim: int) -> Transition:
+    def init_dummy(cls, observation_dim: int, action_dim: int, reward_dim: int) -> Transition:
         """
         Initialize a dummy transition that then can be passed to constructors to get
         all shapes right.
@@ -121,7 +123,7 @@ class Transition(flax.struct.PyTreeNode):
         dummy_transition = Transition(
             obs=jnp.zeros(shape=(1, observation_dim)),
             next_obs=jnp.zeros(shape=(1, observation_dim)),
-            rewards=jnp.zeros(shape=(1,)),
+            rewards=jnp.zeros(shape=(1, reward_dim)),
             dones=jnp.zeros(shape=(1,)),
             truncations=jnp.zeros(shape=(1,)),
             actions=jnp.zeros(shape=(1, action_dim)),
@@ -145,6 +147,15 @@ class QDTransition(Transition):
         return self.state_desc.shape[-1]  # type: ignore
 
     @property
+    def reward_dim(self) -> int:
+        """
+        Returns:
+            the dimension of the reward
+        """
+        return self.rewards.shape[-1]  # type: ignore
+
+
+    @property
     def flatten_dim(self) -> int:
         """
         Returns:
@@ -154,21 +165,25 @@ class QDTransition(Transition):
         flatten_dim = (
             2 * self.observation_dim
             + self.action_dim
-            + 3
+            + self.reward_dim
+            + 2
             + 2 * self.state_descriptor_dim
         )
+                
         return flatten_dim
+
 
     def flatten(self) -> jnp.ndarray:
         """
         Returns:
             a jnp.ndarray that corresponds to the flattened transition.
         """
+
         flatten_transition = jnp.concatenate(
             [
                 self.obs,
                 self.next_obs,
-                jnp.expand_dims(self.rewards, axis=-1),
+                self.rewards,
                 jnp.expand_dims(self.dones, axis=-1),
                 jnp.expand_dims(self.truncations, axis=-1),
                 self.actions,
@@ -200,27 +215,29 @@ class QDTransition(Transition):
         obs_dim = transition.observation_dim
         action_dim = transition.action_dim
         desc_dim = transition.state_descriptor_dim
+        reward_dim = transition.reward_dim
 
         obs = flattened_transition[:, :obs_dim]
         next_obs = flattened_transition[:, obs_dim : (2 * obs_dim)]
-        rewards = jnp.ravel(flattened_transition[:, (2 * obs_dim) : (2 * obs_dim + 1)])
+        rewards = flattened_transition[:, (2 * obs_dim) : (2 * obs_dim + reward_dim)]
+
         dones = jnp.ravel(
-            flattened_transition[:, (2 * obs_dim + 1) : (2 * obs_dim + 2)]
+            flattened_transition[:, (2 * obs_dim + reward_dim) : (2 * obs_dim + reward_dim + 1)]
         )
         truncations = jnp.ravel(
-            flattened_transition[:, (2 * obs_dim + 2) : (2 * obs_dim + 3)]
+            flattened_transition[:, (2 * obs_dim + reward_dim + 1) : (2 * obs_dim + reward_dim + 2)]
         )
         actions = flattened_transition[
-            :, (2 * obs_dim + 3) : (2 * obs_dim + 3 + action_dim)
+            :, (2 * obs_dim + reward_dim + 2) : (2 * obs_dim + reward_dim + 2 + action_dim)
         ]
         state_desc = flattened_transition[
             :,
-            (2 * obs_dim + 3 + action_dim) : (2 * obs_dim + 3 + action_dim + desc_dim),
+            (2 * obs_dim + reward_dim + 2 + action_dim) : (2 * obs_dim + reward_dim + 2 + action_dim + desc_dim),
         ]
         next_state_desc = flattened_transition[
             :,
-            (2 * obs_dim + 3 + action_dim + desc_dim) : (
-                2 * obs_dim + 3 + action_dim + 2 * desc_dim
+            (2 * obs_dim + reward_dim + 2 + action_dim + desc_dim) : (
+                2 * obs_dim + reward_dim + 2 + action_dim + 2 * desc_dim
             ),
         ]
         return cls(
@@ -236,7 +253,7 @@ class QDTransition(Transition):
 
     @classmethod
     def init_dummy(  # type: ignore
-        cls, observation_dim: int, action_dim: int, descriptor_dim: int
+        cls, observation_dim: int, action_dim: int, descriptor_dim: int, reward_dim: int,
     ) -> QDTransition:
         """
         Initialize a dummy transition that then can be passed to constructors to get
@@ -252,13 +269,14 @@ class QDTransition(Transition):
         dummy_transition = QDTransition(
             obs=jnp.zeros(shape=(1, observation_dim)),
             next_obs=jnp.zeros(shape=(1, observation_dim)),
-            rewards=jnp.zeros(shape=(1,)),
+            rewards=jnp.zeros(shape=(1, reward_dim)),
             dones=jnp.zeros(shape=(1,)),
             truncations=jnp.zeros(shape=(1,)),
             actions=jnp.zeros(shape=(1, action_dim)),
             state_desc=jnp.zeros(shape=(1, descriptor_dim)),
             next_state_desc=jnp.zeros(shape=(1, descriptor_dim)),
         )
+
         return dummy_transition
 
 
@@ -323,6 +341,7 @@ class ReplayBuffer(flax.struct.PyTreeNode):
             maxval=self.current_size,
         )
         samples = jnp.take(self.data, idx, axis=0, mode="clip")
+
         transitions = self.transition.__class__.from_flatten(samples, self.transition)
         return transitions, random_key
 

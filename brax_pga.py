@@ -115,11 +115,12 @@ def main(config: ExperimentConfig) -> None:
         
         state_desc = env_state.info["state_descriptor"]
         next_state = env.step(env_state, actions)
+        reward = jnp.expand_dims(jnp.array(next_state.reward), axis=-1)
 
         transition = QDTransition(
             obs=env_state.obs,
             next_obs=next_state.obs,
-            rewards=next_state.reward,
+            rewards=reward,
             dones=next_state.done,
             actions=actions,
             truncations=next_state.info["truncation"],
@@ -137,6 +138,7 @@ def main(config: ExperimentConfig) -> None:
         episode_length=config.episode_length,
         play_step_fn=play_step_fn,
         behavior_descriptor_extractor=bd_extraction_fn,
+        num_objective_functions=config.num_objective_functions,
     )
 
     # Get minimum reward value to make sure qd_score are positive
