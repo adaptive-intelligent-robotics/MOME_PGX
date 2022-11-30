@@ -131,6 +131,7 @@ def generate_unroll(
         "episode_length",
         "play_step_fn",
         "behavior_descriptor_extractor",
+        "num_objective_functions",
     ),
 )
 def scoring_function(
@@ -143,6 +144,7 @@ def scoring_function(
         Tuple[EnvState, Params, RNGKey, QDTransition],
     ],
     behavior_descriptor_extractor: Callable[[QDTransition, jnp.ndarray], Descriptor],
+    num_objective_functions: int,
 ) -> Tuple[Fitness, Descriptor, ExtraScores, RNGKey]:
     """Evaluates policies contained in policies_params in parallel in
     deterministic or pseudo-deterministic environments.
@@ -168,9 +170,10 @@ def scoring_function(
     is_done = jnp.clip(jnp.cumsum(data.dones, axis=1), 0, 1)
     mask = jnp.roll(is_done, 1, axis=1)
     mask = mask.at[:, 0].set(0)
+    fitnesses_mask = jnp.repeat(jnp.expand_dims(mask, axis=-1), repeats=num_objective_functions, axis=-1)
 
     # Scores - add offset to ensure positive fitness (through positive rewards)
-    fitnesses = jnp.sum(data.rewards * (1.0 - mask), axis=1)
+    fitnesses = jnp.sum(data.rewards * (1.0 - fitnesses_mask), axis=1)
     descriptors = behavior_descriptor_extractor(data, mask)
 
     return (
@@ -319,62 +322,3 @@ def get_first_episode(transition: Transition) -> Transition:
     return jax.tree_util.tree_map(mask_episodes, transition)  # type: ignore
 
 
-@partial(
-    jax.jit,
-    static_argnames=(
-        "episode_length",
-        "play_step_fn",
-        "behavior_descriptor_extractor",
-        "num_objective_functions",
-    ),
-)
-def mo_scoring_function(
-    policies_params: Genotype,
-    random_key: RNGKey,
-    init_states: brax.envs.State,
-    episode_length: int,
-    play_step_fn: Callable[
-        [EnvState, Params, RNGKey, brax.envs.Env],
-        Tuple[EnvState, Params, RNGKey, QDTransition],
-    ],
-    behavior_descriptor_extractor: Callable[[QDTransition, jnp.ndarray], Descriptor],
-    num_objective_functions: int,
-) -> Tuple[Fitness, Descriptor, ExtraScores, RNGKey]:
-    """Evaluates policies contained in policies_params in parallel in
-    deterministic or pseudo-deterministic environments.
-
-    This rollout is only deterministic when all the init states are the same.
-    If the init states are fixed but different, as a policy is not necessarly
-    evaluated with the same environment everytime, this won't be determinist.
-    When the init states are different, this is not purely stochastic.
-    """
-
-    # Perform rollouts with each policy
-    random_key, subkey = jax.random.split(random_key)
-    unroll_fn = partial(
-        generate_unroll,
-        episode_length=episode_length,
-        play_step_fn=play_step_fn,
-        random_key=subkey,
-    )
-
-    _final_state, data = jax.vmap(unroll_fn)(init_states, policies_params)
-
-    # create a mask to extract data properly
-    is_done = jnp.clip(jnp.cumsum(data.dones, axis=1), 0, 1)
-    mask = jnp.roll(is_done, 1, axis=1)
-    mask = mask.at[:, 0].set(0)
-    fitnesses_mask = jnp.repeat(jnp.expand_dims(mask, axis=-1), repeats=num_objective_functions, axis=-1)
-
-    # Scores - add offset to ensure positive fitness (through positive rewards)
-    fitnesses = jnp.sum(data.rewards * (1.0 - fitnesses_mask), axis=1)
-    descriptors = behavior_descriptor_extractor(data, mask)
-
-    return (
-        fitnesses,
-        descriptors,
-        {
-            "transitions": data,
-        },
-        random_key,
-    )

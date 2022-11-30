@@ -12,7 +12,7 @@ from qdax.core.emitters.mutation_operators import (
     isoline_variation, 
 )
 from qdax.core.emitters.standard_emitters import MixingEmitter
-from qdax.core.neuroevolution.mdp_utils import mo_scoring_function
+from qdax.core.neuroevolution.mdp_utils import scoring_function
 from qdax.core.neuroevolution.buffers.buffer import QDTransition
 from qdax.core.neuroevolution.networks.networks import MLP
 from qdax.utils.metrics import CSVLogger, default_moqd_metrics
@@ -131,13 +131,14 @@ def main(config: ExperimentConfig) -> None:
     # Prepare the scoring function
     bd_extraction_fn = environments.behavior_descriptor_extractor[config.env_name]
     brax_scoring_function = partial(
-        mo_scoring_function,
+        scoring_function,
         init_states=init_states,
         episode_length=config.episode_length,
         play_step_fn=play_step_fn,
         behavior_descriptor_extractor=bd_extraction_fn,
         num_objective_functions=config.num_objective_functions,
     )
+
 
     # crossover function
     crossover_function = partial(
