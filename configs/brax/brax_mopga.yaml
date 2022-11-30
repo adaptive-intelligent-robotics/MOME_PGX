@@ -1,0 +1,54 @@
+hydra:
+    run:
+        dir: ./results/brax_mopga/${now:%Y-%m-%d}/${now:%H-%M-%S}
+
+# Env config
+alg_name: brax_mopga
+seed: 42
+env_name: walker2d_multi
+episode_length: 1000
+
+# MOO parameters
+num_objective_functions: 2
+pareto_front_max_length: 50
+reference_point: [0, -10]
+
+# Initialisation parameters
+num_evaluations: 1000000
+num_init_cvt_samples: 50000 
+num_centroids: 1024 
+
+# Brax parameters
+num_descriptor_dimensions: 2
+policy_hidden_layer_sizes: [64, 64] 
+minval: 0. 
+maxval: 1.
+
+# Emitter parameters
+iso_sigma: 0.005 
+line_sigma: 0.05 
+mutation_ga_batch_size: 128
+mutation_pg_batch_size: 63
+
+# Logging parameters
+metrics_log_period: 50
+plot_repertoire_period: 100
+checkpoint_period: 100
+save_checkpoint_visualisations: False
+save_final_visualisations: True
+num_save_visualisations: 10
+
+# TD3 params
+replay_buffer_size: 1000000 
+critic_hidden_layer_size: [256, 256] 
+critic_learning_rate: 0.0003
+greedy_learning_rate: 0.0003
+policy_learning_rate: 0.001
+noise_clip: 0.5 
+policy_noise: 0.2 
+discount: 0.99 
+reward_scaling: [1.0, 1.0]  
+transitions_batch_size: 256 
+soft_tau_update: 0.005 
+num_critic_training_steps: 300 
+num_pg_training_steps: 100 

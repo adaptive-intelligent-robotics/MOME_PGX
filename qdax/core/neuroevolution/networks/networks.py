@@ -13,6 +13,7 @@ class QModule(nn.Module):
 
     hidden_layer_sizes: Tuple[int, ...]
     n_critics: int = 2
+    num_objective_functions: int = 1
 
     @nn.compact
     def __call__(self, obs: jnp.ndarray, actions: jnp.ndarray) -> jnp.ndarray:
@@ -20,12 +21,12 @@ class QModule(nn.Module):
         res = []
         for _ in range(self.n_critics):
             q = networks.MLP(
-                layer_sizes=self.hidden_layer_sizes + (1,),
+                layer_sizes=self.hidden_layer_sizes + (self.num_objective_functions,),
                 activation=nn.relu,
                 kernel_init=jax.nn.initializers.lecun_uniform(),
             )(hidden)
             res.append(q)
-        return jnp.concatenate(res, axis=-1)
+        return jnp.array(res)
 
 
 class MLP(nn.Module):

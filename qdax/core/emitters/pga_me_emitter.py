@@ -22,8 +22,9 @@ from qdax.types import Descriptor, ExtraScores, Fitness, Genotype, Params, RNGKe
 class PGAMEConfig:
     """Configuration for PGAME Algorithm"""
 
-    env_batch_size: int = 100
-    proportion_mutation_ga: float = 0.5
+    num_objective_functions: int = 1 
+    mutation_ga_batch_size: int = 128,
+    mutation_pg_batch_size: int = 63,    
     num_critic_training_steps: int = 300
     num_pg_training_steps: int = 100
 
@@ -46,11 +47,11 @@ class PGAMEEmitterState(EmitterState):
 
     critic_params: Params
     critic_optimizer_state: optax.OptState
-    greedy_policy_params: Params
-    greedy_policy_opt_state: optax.OptState
-    controllers_optimizer_state: optax.OptState
+    greedy_policy_params: [Params,...]
+    greedy_policy_opt_states: [optax.OptState,...]
+    controllers_optimizer_states: [optax.OptState,...]
     target_critic_params: Params
-    target_greedy_policy_params: Params
+    target_greedy_policy_params: [Params,...]
     replay_buffer: ReplayBuffer
     random_key: RNGKey
     steps: jnp.ndarray
@@ -76,7 +77,9 @@ class PGAMEEmitter(Emitter):
 
         # Init Critics
         critic_network = QModule(
-            n_critics=2, hidden_layer_sizes=self._config.critic_hidden_layer_size
+            n_critics=2, 
+            hidden_layer_sizes=self._config.critic_hidden_layer_size,
+            num_objective_functions=self._config.num_objective_functions,
         )
         self._critic_network = critic_network
 
@@ -88,19 +91,27 @@ class PGAMEEmitter(Emitter):
             discount=self._config.discount,
             noise_clip=self._config.noise_clip,
             policy_noise=self._config.policy_noise,
+            num_objective_functions=self._config.num_objective_functions,
         )
-
+        
         # Init optimizers
-        self._greedy_policy_optimizer = optax.adam(
-            learning_rate=self._config.greedy_learning_rate
-        )
         self._critic_optimizer = optax.adam(
             learning_rate=self._config.critic_learning_rate
         )
-        self._controllers_optimizer = optax.adam(
-            learning_rate=self._config.policy_learning_rate
-        )
 
+        # Initialiser a greedy optimisers per objective function
+        self._greedy_policy_optimizers = []
+        self._controllers_optimizers = []
+
+        for objective_index in range(self._config.num_objective_functions):
+            greedy_optimizer = optax.adam(
+                learning_rate=self._config.greedy_learning_rate)
+            controllers_optimizer = optax.adam(
+                learning_rate=self._config.policy_learning_rate)
+            
+            self._greedy_policy_optimizers.append(greedy_optimizer)
+            self._controllers_optimizers.append(controllers_optimizer)
+        
     def init(
         self, init_genotypes: Genotype, random_key: RNGKey
     ) -> Tuple[PGAMEEmitterState, RNGKey]:
@@ -117,35 +128,53 @@ class PGAMEEmitter(Emitter):
         observation_size = self._env.observation_size
         action_size = self._env.action_size
         descriptor_size = self._env.state_descriptor_length
+        reward_size = self._config.num_objective_functions
+        num_objective_functions = self._config.num_objective_functions
 
-        # Initialise critic, greedy and population
+        # Initialise dummy observations and actions
         random_key, subkey = jax.random.split(random_key)
         fake_obs = jnp.zeros(shape=(observation_size,))
         fake_action = jnp.zeros(shape=(action_size,))
+
+        # Initialise critic networks and optimiser
         critic_params = self._critic_network.init(
-            subkey, obs=fake_obs, actions=fake_action
+            subkey, 
+            obs=fake_obs, 
+            actions=fake_action, 
         )
         target_critic_params = jax.tree_util.tree_map(lambda x: x, critic_params)
-
-        greedy_policy_params = jax.tree_util.tree_map(lambda x: x[0], init_genotypes)
-        target_greedy_policy_params = jax.tree_util.tree_map(
-            lambda x: x[0], init_genotypes
-        )
-
-        # Prepare init optimizer states
         critic_optimizer_state = self._critic_optimizer.init(critic_params)
-        greedy_optimizer_state = self._greedy_policy_optimizer.init(
-            greedy_policy_params
-        )
-        controllers_optimizer_state = self._controllers_optimizer.init(
-            greedy_policy_params
-        )
+
+        # Initialise policy networks and optimisers
+        greedy_policy_params = []
+        target_greedy_policy_params = []
+        greedy_optimizer_states = []
+        controllers_optimizer_states = []
+
+        for objective_index in range(num_objective_functions):
+            # init params
+            policy_params = jax.tree_util.tree_map(lambda x: x[objective_index], init_genotypes)
+            target_params = jax.tree_util.tree_map(lambda x: x[objective_index], init_genotypes)
+            greedy_optimizer_state = self._greedy_policy_optimizers[objective_index].init(policy_params)
+            controllers_optimizer_state = self._controllers_optimizers[objective_index].init(policy_params)
+
+            #store params 
+            greedy_policy_params.append(policy_params)
+            target_greedy_policy_params.append(target_params)
+            greedy_optimizer_states.append(greedy_optimizer_state)
+            controllers_optimizer_states.append(controllers_optimizer_state)
+
+        #print("GREEDY POLICY PARAMS:", greedy_policy_params)
+        #print("TARGET GREEDY POLICY PARAMS", target_greedy_policy_params)
+        #print("GREEDY OPTIMIZER STATES:", greedy_optimizer_states)
+        #print("CONTROLLERS_OPTIMIZER_STATES:", controllers_optimizer_states)
 
         # Initialize replay buffer
         dummy_transition = QDTransition.init_dummy(
             observation_dim=observation_size,
             action_dim=action_size,
             descriptor_dim=descriptor_size,
+            reward_dim=reward_size,
         )
 
         replay_buffer = ReplayBuffer.init(
@@ -158,8 +187,8 @@ class PGAMEEmitter(Emitter):
             critic_params=critic_params,
             critic_optimizer_state=critic_optimizer_state,
             greedy_policy_params=greedy_policy_params,
-            greedy_policy_opt_state=greedy_optimizer_state,
-            controllers_optimizer_state=controllers_optimizer_state,
+            greedy_policy_opt_states=greedy_optimizer_states,
+            controllers_optimizer_states=controllers_optimizer_states,
             target_critic_params=target_critic_params,
             target_greedy_policy_params=target_greedy_policy_params,
             random_key=subkey,
@@ -192,17 +221,20 @@ class PGAMEEmitter(Emitter):
             A batch of offspring, the new emitter state and a new key.
         """
 
-        batch_size = self._config.env_batch_size
+        mutation_ga_batch_size = self._config.mutation_ga_batch_size
+        mutation_pg_batch_size = self._config.mutation_pg_batch_size
+
+        #total_batch_size = mutation_ga_batch_size + (mutation_pg_batch_size + 1) * num_objective functions
 
         # Mutation evo
-        mutation_ga_batch_size = int(self._config.proportion_mutation_ga * batch_size)
         x1, random_key = repertoire.sample(random_key, mutation_ga_batch_size)
         x2, random_key = repertoire.sample(random_key, mutation_ga_batch_size)
         x_mutation_ga, random_key = self._variation_fn(x1, x2, random_key)
 
         # Mutation PG
-        mutation_pg_batch_size = int(batch_size - mutation_ga_batch_size - 1)
         x1, random_key = repertoire.sample(random_key, mutation_pg_batch_size)
+        print("SAMPLE:", x1)
+
         mutation_fn = partial(
             self._mutation_function_pg,
             emitter_state=emitter_state,
@@ -312,6 +344,9 @@ class PGAMEEmitter(Emitter):
             samples,
             subkey,
         )
+
+        print("CRITIC LOSS:", critic_loss)
+
         critic_updates, critic_optimizer_state = self._critic_optimizer.update(
             critic_gradient, emitter_state.critic_optimizer_state
         )
@@ -429,6 +464,8 @@ class PGAMEEmitter(Emitter):
             emitter_state.critic_params,
             samples,
         )
+
+        print("POLICY GRADIENT:", policy_gradient)
         # Compute gradient and update policies
         (policy_updates, policy_optimizer_state,) = self._controllers_optimizer.update(
             policy_gradient, emitter_state.controllers_optimizer_state
