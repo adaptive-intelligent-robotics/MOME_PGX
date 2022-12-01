@@ -38,15 +38,12 @@ class MixingEmitter(Emitter):
         copied and cross-over to obtain new offsprings. One batch of
         (1.0 - variation_percentage) * batch_size genotypes are sampled in the
         repertoire, copied and mutated.
-
         Note: this emitter has no state. A fake none state must be added
         through a function redefinition to make this emitter usable with MAP-Elites.
-
         Params:
             repertoire: the MAP-Elites repertoire to sample from
             emitter_state: void
             random_key: a jax PRNG random key
-
         Returns:
             a batch of offsprings
             a new jax PRNG key
@@ -76,3 +73,11 @@ class MixingEmitter(Emitter):
             )
 
         return genotypes, random_key
+
+    @property
+    def batch_size(self) -> int:
+        """
+        Returns:
+            the batch size emitted by the emitter.
+        """
+        return self._batch_size
