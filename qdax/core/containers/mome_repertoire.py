@@ -424,3 +424,78 @@ class MOMERepertoire(MapElitesRepertoire):
         pareto_front = fitnesses - jnp.inf * (~jnp.array([pareto_mask, pareto_mask]).T)
 
         return pareto_front, pareto_mask
+
+    @jax.jit
+    def get_best_individuals(self) -> Tuple[Genotype, Fitness, jnp.ndarray]:
+        """ Return individuals with highest fitness in each objective function
+        
+        Returns:
+            Individuals and corresponding fitness values
+        
+        """
+        fitnesses = jnp.concatenate(self.fitnesses, axis=0)
+        best_individuals = jnp.argmax(fitnesses, axis=0)
+        best_fitnesses = jnp.take(fitnesses, best_individuals, axis=0)
+        genotypes_list = jax.tree_util.tree_map(
+            lambda x: jnp.concatenate(x, axis=0), self.genotypes
+        )
+        best_genotypes = []
+
+        for individual in best_individuals:
+            genotype = jax.tree_util.tree_map(
+                lambda x: x[individual], genotypes_list
+            )
+            best_genotypes.append(genotype)
+        
+        return (best_genotypes, best_fitnesses)
+
+
+    def sample_global_pf(self, random_key: RNGKey, num_samples: int) -> Tuple[Genotype, RNGKey]:
+        """Sample elements from global pareto front.
+
+        Args:
+            random_key: a random key to handle stochasticity.
+            num_samples: number of samples to retrieve from the repertoire.
+
+        Returns:
+            A sample of genotypes and a new random key.
+        """
+
+        pareto_front, pareto_mask = self.compute_global_pareto_front
+
+        # create sampling probability for the cells
+        repertoire_empty = jnp.any(self.fitnesses == -jnp.inf, axis=-1)
+        occupied_cells = jnp.any(~repertoire_empty, axis=-1)
+
+        p = occupied_cells / jnp.sum(occupied_cells)
+
+        # possible indices - num cells
+        indices = jnp.arange(start=0, stop=repertoire_empty.shape[0])
+
+        # choose idx - among indices of cells that are not empty
+        random_key, subkey = jax.random.split(random_key)
+        cells_idx = jax.random.choice(subkey, indices, shape=(num_samples,), p=p)
+
+        # get genotypes (front) from the chosen indices
+        pareto_front_genotypes = jax.tree_util.tree_map(
+            lambda x: x[cells_idx], self.genotypes
+        )
+
+        # prepare second sampling function
+        sample_in_fronts = jax.vmap(self._sample_in_masked_pareto_front)
+
+        # sample genotypes from the pareto front
+        random_key, subkey = jax.random.split(random_key)
+        subkeys = jax.random.split(subkey, num=num_samples)
+        sampled_genotypes = sample_in_fronts(  # type: ignore
+            pareto_front_genotypes=pareto_front_genotypes,
+            mask=repertoire_empty[cells_idx],
+            random_key=subkeys,
+        )
+
+        # remove the dim coming from pareto front
+        sampled_genotypes = jax.tree_util.tree_map(
+            lambda x: x.squeeze(axis=1), sampled_genotypes
+        )
+
+        return sampled_genotypes, random_key

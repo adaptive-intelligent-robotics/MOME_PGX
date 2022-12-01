@@ -76,6 +76,18 @@ def save_mo_samples(
     number_individuals = len(repertoire.fitnesses)
 
     # Visualise the best individual
+    best_genotypes, best_fitnesses = repertoire.get_best_individuals()
+
+    for index, genotype in enumerate(best_genotypes):
+        visualise_individual(
+            env,
+            policy_network,
+            genotype,
+            f"best_iteration_{iteration}_fitness_{best_fitnesses[index]}.html",
+            save_dir
+        )
+
+
     """
     best_indices = np.matrix.argmax(np.array(repertoire.fitnesses), axis = -1)
     print("BEST INDICES:", best_indices)
