@@ -28,7 +28,7 @@ maxval: 1.
 iso_sigma: 0.005 
 line_sigma: 0.05 
 mutation_ga_batch_size: 128
-mutation_pg_batch_size: 63
+mutation_qpg_batch_size: 64
 
 # Logging parameters
 metrics_log_period: 50
@@ -50,5 +50,6 @@ discount: 0.99
 reward_scaling: [1.0, 1.0]  
 transitions_batch_size: 256 
 soft_tau_update: 0.005 
+policy_delay: 2
 num_critic_training_steps: 300 
 num_pg_training_steps: 100 

@@ -45,7 +45,7 @@ class ExperimentConfig:
     iso_sigma: float
     line_sigma: float 
     mutation_ga_batch_size: int
-    mutation_pg_batch_size: int
+    mutation_qpg_batch_size: int
 
     # Logging parameters
     metrics_log_period: int
@@ -67,6 +67,7 @@ class ExperimentConfig:
     reward_scaling: Tuple[float, ...]
     transitions_batch_size: int 
     soft_tau_update: float 
+    policy_delay: int
     num_critic_training_steps: int 
     num_pg_training_steps: int 
 
@@ -76,7 +77,7 @@ class ExperimentConfig:
 @hydra.main(config_path="configs/brax/", config_name="brax_mopga")
 def main(config: ExperimentConfig) -> None:
 
-    batch_size = config.mutation_ga_batch_size + (config.mutation_pg_batch_size + 1) * config.num_objective_functions
+    batch_size = config.mutation_ga_batch_size + config.mutation_qpg_batch_size * config.num_objective_functions
 
     num_iterations = config.num_evaluations // batch_size
 
@@ -165,7 +166,7 @@ def main(config: ExperimentConfig) -> None:
     mopga_emitter_config = PGAMEConfig(
         num_objective_functions=config.num_objective_functions,
         mutation_ga_batch_size=config.mutation_ga_batch_size,
-        mutation_pg_batch_size=config.mutation_pg_batch_size,
+        mutation_qpg_batch_size=config.mutation_qpg_batch_size,
         critic_hidden_layer_size=config.critic_hidden_layer_size,
         critic_learning_rate=config.critic_learning_rate,
         greedy_learning_rate=config.greedy_learning_rate,
@@ -176,6 +177,7 @@ def main(config: ExperimentConfig) -> None:
         reward_scaling=config.reward_scaling,
         replay_buffer_size=config.replay_buffer_size,
         soft_tau_update=config.soft_tau_update,
+        policy_delay=config.policy_delay,
         num_critic_training_steps=config.num_critic_training_steps,
         num_pg_training_steps=config.num_pg_training_steps
     )
