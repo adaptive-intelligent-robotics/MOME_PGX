@@ -87,28 +87,25 @@ def save_mo_samples(
             save_dir
         )
 
-
-    """
-    best_indices = np.matrix.argmax(np.array(repertoire.fitnesses), axis = -1)
-    print("BEST INDICES:", best_indices)
-    for objective_fn, best_idx in enumerate(best_indices):
+    # Visualise individuals from global pareto front
+    pf_genotypes, _ = repertoire.sample(random_key, num_save_visualisations)
+    
+    for sample in range(num_save_visualisations):
         params = jax.tree_util.tree_map(
-            lambda x: x[best_idx],
-            repertoire.genotypes
-            )
-        
+            lambda x: x[sample],
+            pf_genotypes
+        )
+
         visualise_individual(
             env,
             policy_network,
             params,
-            f"best_iteration_{iteration}_individual_{best_idx}_objective_fn{objective_fn+1}.html",
+            f"iteration_{iteration}_pf_sample_{sample}.html",
             save_dir
         )
 
-    print("DONE BEST INDIVIDUALS")
-    """
 
-    # create sampling probability for the cells
+    # Sample random solutions from entire population
     sampled_genotypes, _ = repertoire.sample(random_key, num_save_visualisations)
 
     for sample in range(num_save_visualisations):
