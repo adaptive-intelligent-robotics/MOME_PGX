@@ -31,12 +31,12 @@ mutation_ga_batch_size: 128
 mutation_qpg_batch_size: 64
 
 # Logging parameters
-metrics_log_period: 50
-plot_repertoire_period: 100
-checkpoint_period: 100
+metrics_log_period: 100
+plot_repertoire_period: 200
+checkpoint_period: 500
 save_checkpoint_visualisations: False
 save_final_visualisations: True
-num_save_visualisations: 10
+num_save_visualisations: 5
 
 # TD3 params
 replay_buffer_size: 1000000 

@@ -1,3 +1,4 @@
+import csv
 import chex
 import flax
 import hydra
@@ -7,6 +8,7 @@ import logging
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import os
+import pandas as pd
 import pickle
 import time
 import visu_brax
@@ -56,7 +58,7 @@ class RunMOME:
                 num_descriptor_dimensions: int,
                 minval: int,
                 maxval: int,
-                num_iterations: int, 
+                num_evaluations: int, 
                 num_centroids: int,
                 num_init_cvt_samples: int,
                 batch_size: int, 
@@ -77,7 +79,7 @@ class RunMOME:
         self.num_descriptor_dimensions = num_descriptor_dimensions
         self.minval = minval
         self.maxval = maxval
-        self.num_iterations =  num_iterations
+        self.num_evaluations =  num_evaluations
         self.num_centroids = num_centroids
         self.num_init_cvt_samples = num_init_cvt_samples
         self.batch_size =  batch_size
@@ -102,8 +104,8 @@ class RunMOME:
     ) -> Tuple[MOMERepertoire, Genotype, RNGKey]:
             
         # Set up logging functions 
-        num_loops = self.num_iterations // self.metrics_log_period
-        self.num_iterations = num_loops * self.metrics_log_period * self.batch_size #update true number of iterations
+        self.num_iterations = self.num_evaluations // self.batch_size
+        num_loops = int(self.num_iterations/self.metrics_log_period)
 
         logging.basicConfig(level=logging.DEBUG)
         logging.getLogger().handlers[0].setLevel(logging.INFO)
@@ -193,12 +195,9 @@ class RunMOME:
                 "global_hypervolume": jnp.array([0.0]), 
         }
 
-        logger.warning(f"--- Running MOME for {num_loops} loops ---")
 
         # Run the algorithm
-        for i in range(num_loops):
-            iteration = (i+1) * self.metrics_log_period
-            logger.warning(f"------ Iteration {iteration} out of {self.num_iterations} ------")
+        for iteration in range(self.num_iterations):
 
             start_time = time.time()
 
@@ -207,22 +206,26 @@ class RunMOME:
                 mome.scan_update,
                 (repertoire, emitter_state, random_key),
                 (),
-                length=self.metrics_log_period,
+                length=1,
             )
 
             timelapse = time.time() - start_time
             total_algorithm_duration += timelapse
+
             metrics_history = {key: jnp.concatenate((metrics_history[key], metrics[key]), axis=0) for key in metrics}
 
-            logger.warning(f"--- MOQD Score: {metrics['moqd_score'][-1]:.2f}")
-            logger.warning(f"--- Coverage: {metrics['coverage'][-1]:.2f}%")
-            logger.warning("--- Max Fitnesses:" +  str(metrics['max_scores'][-1]))
+            if iteration % self.metrics_log_period == 0:
+                logger.warning(f"------ Iteration {iteration+1} out of {self.num_iterations} ------")
 
-            timings["avg_iteration_time"] = (timings["avg_iteration_time"]*(i*self.metrics_log_period) + timelapse) / ((i+1)*self.metrics_log_period)
-            timings["avg_evalps"] = (timings["avg_evalps"]*(i*self.metrics_log_period) + ((self.batch_size*self.metrics_log_period)/timelapse)) / ((i+1)*self.metrics_log_period)
-            timings["runtime_logs"] = timings["runtime_logs"].at[i, 0].set(total_algorithm_duration)
+                logger.warning(f"--- MOQD Score: {metrics['moqd_score'][-1]:.2f}")
+                logger.warning(f"--- Coverage: {metrics['coverage'][-1]:.2f}%")
+                logger.warning("--- Max Fitnesses:" +  str(metrics['max_scores'][-1]))
 
-           
+                timings["avg_iteration_time"] = (timings["avg_iteration_time"]*(iteration*self.metrics_log_period) + timelapse) / ((iteration+1)*self.metrics_log_period)
+                timings["avg_evalps"] = (timings["avg_evalps"]*(iteration*self.metrics_log_period) + ((self.batch_size*self.metrics_log_period)/timelapse)) / ((iteration+1)*self.metrics_log_period)
+                timings["runtime_logs"] = timings["runtime_logs"].at[iteration, 0].set(total_algorithm_duration)
+
+
             # Save plot of repertoire every plot_repertoire_period iterations
             if iteration % self.plot_repertoire_period == 0:
                 self.plot_repertoire(
@@ -236,13 +239,14 @@ class RunMOME:
             # Save latest repertoire and metrics every 'checkpoint_period' iterations
             if iteration % self.checkpoint_period == 0:
                 repertoire.save(path=_final_repertoire_dir)
-                    
-                with open(os.path.join(_metrics_dir, "metrics_history.pkl"), 'wb') as f:
-                    pickle.dump(metrics_history, f)
 
-                with open(os.path.join(_metrics_dir, "timings.pkl"), 'wb') as f:
-                    pickle.dump(timings, f)
-                
+                metrics_history_df = pd.DataFrame.from_dict(metrics_history,orient='index').transpose()
+                metrics_history_df.to_csv(os.path.join(_metrics_dir, "metrics_history.csv"), index=False)
+
+                timings_df = pd.DataFrame.from_dict(timings,orient='index').transpose()
+                timings_df.to_csv(os.path.join(_metrics_dir, "timings.csv"), index=False)
+
+
                 if self.save_checkpoint_visualisations:
                     random_key, subkey = jax.random.split(random_key)
                     visu_brax.save_mo_samples(
@@ -265,14 +269,15 @@ class RunMOME:
         logger.warning("Max Fitnesses:" + str(metrics['max_scores'][-1]))
 
         # Save metrics
-        with open(os.path.join(_metrics_dir, "metrics_history.pkl"), 'wb') as f:
-            pickle.dump(metrics_history, f)
 
-        with open(os.path.join(_metrics_dir, "timings.pkl"), 'wb') as f:
-            pickle.dump(timings, f)
+        metrics_history_df = pd.DataFrame.from_dict(metrics_history,orient='index').transpose()
+        metrics_history_df.to_csv(os.path.join(_metrics_dir, "metrics_history.csv"), index=False)
 
-        with open(os.path.join(_final_metrics_dir, "final_metrics.pkl"), 'wb') as f:
-            pickle.dump(metrics, f)
+        timings_df = pd.DataFrame.from_dict(timings,orient='index').transpose()
+        timings_df.to_csv(os.path.join(_metrics_dir, "timings.csv"), index=False)
+
+        metrics_df = pd.DataFrame.from_dict(metrics,orient='index').transpose()
+        metrics_df.to_csv(os.path.join(_final_metrics_dir, "final_metrics.csv"), index=False)
 
         # Save final repertoire
         repertoire.save(path=_final_repertoire_dir)
