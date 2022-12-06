@@ -5,6 +5,9 @@ From: airl_lab/default/airl_env:qdax_f57720d0
     Author adaptive.intelligent.robotics@gmail.com
     Version v0.0.1
 
+%files
+    requirements.txt /
+
 %environment
    export PYTHONPATH=$PYTHONPATH:/workspace/lib/python3.8/site-packages/
    export LD_LIBRARY_PATH="/workspace/lib:$LD_LIBRARY_PATH"
