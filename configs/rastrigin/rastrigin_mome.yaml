@@ -1,9 +1,8 @@
 hydra:
     run:
-        dir: ./results/rastrigin_mome/${now:%Y-%m-%d}/${now:%H-%M-%S}
+        dir: ./results/${env_name}/${hydra.job.name}/${seed}
 
 # Env config
-alg_name: rastrigin_mome
 seed: 42
 env_name: rastrigin
 episode_length: 1

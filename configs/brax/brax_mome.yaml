@@ -1,9 +1,8 @@
 hydra:
     run:
-        dir: ./results/brax_mome/${now:%Y-%m-%d}/${now:%H-%M-%S}
+        dir: ./results/${env_name}/${hydra.job.name}/${seed}
 
 # Env config
-alg_name: brax_mome
 seed: 42
 env_name: walker2d_multi
 episode_length: 1000
@@ -33,9 +32,9 @@ eta: 1
 crossover_percentage: 1. 
 
 # Logging parameters
-metrics_log_period: 50
-plot_repertoire_period: 50
-checkpoint_period: 100
+metrics_log_period: 100
+plot_repertoire_period: 200
+checkpoint_period: 500
 save_checkpoint_visualisations: False
 save_final_visualisations: True
 num_save_visualisations: 10

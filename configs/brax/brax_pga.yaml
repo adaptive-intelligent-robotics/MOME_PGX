@@ -1,9 +1,9 @@
 hydra:
     run:
-        dir: ./results/brax_pga/${now:%Y-%m-%d}/${now:%H-%M-%S}
+        dir: ./results/${env_name}/${hydra.job.name}/${seed}
+
 
 # Env config
-alg_name: brax_pga
 seed: 42
 env_name: walker2d_uni
 episode_length: 1000

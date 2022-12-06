@@ -1,9 +1,8 @@
 hydra:
     run:
-        dir: ./results/brax_mopga/${now:%Y-%m-%d}/${now:%H-%M-%S}
+        dir: ./results/${env_name}/${hydra.job.name}/${seed}
 
 # Env config
-alg_name: brax_mopga
 seed: 42
 env_name: walker2d_multi
 episode_length: 1000
@@ -36,7 +35,7 @@ plot_repertoire_period: 200
 checkpoint_period: 500
 save_checkpoint_visualisations: False
 save_final_visualisations: True
-num_save_visualisations: 5
+num_save_visualisations: 10
 
 # TD3 params
 replay_buffer_size: 1000000 

@@ -35,7 +35,6 @@ class ExperimentConfig:
     """Configuration from this experiment script"""
 
     # Env config
-    alg_name: str
     seed: int
     env_name: str
     episode_length: int
