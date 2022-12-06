@@ -33,7 +33,7 @@ From: airl_lab/default/airl_env:qdax_f57720d0
    cd /project/
 
     if [ $SINGULARITY_SANDBOX -eq 0 ]; then
-        git clone https://gitlab.doc.ic.ac.uk/AIRL/research_projects/hannah_janmohamed/mooqd.
+        git clone https://gitlab.doc.ic.ac.uk/AIRL/research_projects/hannah_janmohamed/mooqd.git .
         git checkout $SINGULARITY_COMMIT
     fi
 
