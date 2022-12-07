@@ -116,12 +116,12 @@ _qdax_custom_envs = {
     },
     "ant_multi": {
         "env": "ant", 
-        "wrappers": [MultiObjectiveRewardWrapper, FeetContactWrapper], 
+        "wrappers": [FeetContactWrapper, MultiObjectiveRewardWrapper], 
         "kwargs": [{}, {}]
     },
     "humanoid_multi": {
         "env": "humanoid",
-        "wrappers": [MultiObjectiveRewardWrapper, FeetContactWrapper],
+        "wrappers": [FeetContactWrapper, MultiObjectiveRewardWrapper],
         "kwargs": [{}, {}],
     },
     "halfcheetah_multi": {
