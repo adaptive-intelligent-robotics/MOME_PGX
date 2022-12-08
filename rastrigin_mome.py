@@ -107,8 +107,6 @@ def rastrigin_scorer(
 @hydra.main(config_path="configs/rastrigin/", config_name="rastrigin_mome")
 def main(config: ExperimentConfig) -> None:
 
-    num_iterations = config.num_evaluations // config.batch_size
-
     # Initialise random key
     random_key = jax.random.PRNGKey(config.seed)
     random_key, subkey = jax.random.split(random_key)
@@ -170,7 +168,7 @@ def main(config: ExperimentConfig) -> None:
                 num_descriptor_dimensions=config.num_descriptor_dimensions,
                 minval=config.minval,
                 maxval=config.maxval,
-                num_iterations=num_iterations, 
+                num_evaluations=config.num_evaluations, 
                 num_centroids=config.num_centroids,
                 num_init_cvt_samples=config.num_init_cvt_samples,
                 batch_size=config.batch_size, 
