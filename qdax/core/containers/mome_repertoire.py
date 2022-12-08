@@ -5,7 +5,7 @@ well as several variants."""
 from __future__ import annotations
 
 from functools import partial
-from typing import Any, Tuple
+from typing import Any, Tuple, List
 
 import jax
 import jax.numpy as jnp
@@ -196,7 +196,11 @@ class MOMERepertoire(MapElitesRepertoire):
             batch_of_criteria=cat_fitnesses, mask=cat_mask
         )
 
-        # get corresponding indices
+        # Gather container addition metrics
+        added_bool = jnp.take(cat_bool_front, -1) # Count if new genotype is now on cell PF
+        removed_count = jnp.sum(~mask) - jnp.sum(cat_bool_front[:-1]) # Count how many 
+
+        # get corresponding indicesß
         indices = (
             jnp.arange(start=0, stop=pareto_front_len + batch_size) * cat_bool_front
         )
@@ -244,7 +248,7 @@ class MOMERepertoire(MapElitesRepertoire):
 
         new_mask = ~new_mask[:front_size]
 
-        return new_front_fitness, new_front_genotypes, new_front_descriptors, new_mask
+        return new_front_fitness, new_front_genotypes, new_front_descriptors, new_mask, added_bool, removed_count
 
     @jax.jit
     def add(
@@ -295,9 +299,11 @@ class MOMERepertoire(MapElitesRepertoire):
             # update pareto front
             (
                 cell_fitness,
-                cell_genotype,
+                cell_genotype, # new pf for cell 
                 cell_descriptor,
                 cell_mask,
+                added_bool,
+                removed_count,
             ) = self._update_masked_pareto_front(
                 pareto_front_fitnesses=cell_fitness,
                 pareto_front_genotypes=cell_genotype,
@@ -325,10 +331,10 @@ class MOMERepertoire(MapElitesRepertoire):
             )
 
             # return new grid
-            return carry, ()
+            return carry, [added_bool, removed_count]
 
         # scan the addition operation for all the data
-        self, _ = jax.lax.scan(
+        self, container_addition_metrics = jax.lax.scan(
             _add_one,
             self,
             (
@@ -339,7 +345,7 @@ class MOMERepertoire(MapElitesRepertoire):
             ),
         )
 
-        return self
+        return self, container_addition_metrics
 
     @classmethod
     def init(  # type: ignore
@@ -349,7 +355,7 @@ class MOMERepertoire(MapElitesRepertoire):
         descriptors: Descriptor,
         centroids: Centroid,
         pareto_front_max_length: int,
-    ) -> MOMERepertoire:
+    ) -> Tuple[MOMERepertoire, List]:
         """
         Initialize a Multi Objective Map-Elites repertoire with an initial population
         of genotypes. Requires the definition of centroids that can be computed with
@@ -404,9 +410,9 @@ class MOMERepertoire(MapElitesRepertoire):
         )
 
         # add first batch of individuals in the repertoire
-        new_repertoire = repertoire.add(genotypes, descriptors, fitnesses)
+        new_repertoire, container_addition_metrics = repertoire.add(genotypes, descriptors, fitnesses)
 
-        return new_repertoire  # type: ignore
+        return new_repertoire, container_addition_metrics  # type: ignore
 
     @jax.jit
     def compute_global_pareto_front(

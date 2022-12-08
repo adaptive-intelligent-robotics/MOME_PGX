@@ -1,5 +1,5 @@
 from functools import partial
-from typing import Optional, Tuple
+from typing import Optional, Tuple, List
 
 import jax
 import numpy as np
@@ -8,7 +8,7 @@ from jax import numpy as jnp
 
 from qdax.core.containers.repertoire import Repertoire
 from qdax.core.emitters.emitter import Emitter, EmitterState
-from qdax.types import Descriptor, ExtraScores, Fitness, Genotype, RNGKey
+from qdax.types import Descriptor, ExtraScores, Fitness, Genotype, Metrics, RNGKey
 
 
 class MultiEmitterState(EmitterState):
@@ -195,3 +195,26 @@ class MultiEmitter(Emitter):
             the batch size emitted by the emitter.
         """
         return sum(emitter.batch_size for emitter in self.emitters)
+    
+    @partial(jax.jit, static_argnames=("self",))   
+    def update_added_counts(
+        self,
+        container_addition_metrics: List,
+        metrics: Metrics,
+    ):
+
+        added_list = container_addition_metrics[0]
+        removed_list = container_addition_metrics[1]
+
+        metrics["removed_count"] = jnp.sum(removed_list)
+
+        for emitter_num in range(len(self.emitters)):
+
+            emitter_added_list = added_list[
+                self.indexes_start_batches[emitter_num]
+                :self.indexes_end_batches[emitter_num]
+            ]
+
+            metrics[f'emitter_{emitter_num+1}_count:'] = jnp.sum(emitter_added_list)
+        
+        return metrics

@@ -137,7 +137,7 @@ class MAPElites:
         )
 
         # add genotypes in the repertoire
-        repertoire = repertoire.add(genotypes, descriptors, fitnesses)
+        repertoire, container_addition_metrics = repertoire.add(genotypes, descriptors, fitnesses)
 
         # update emitter state after scoring is made
         emitter_state = self._emitter.state_update(
@@ -151,7 +151,8 @@ class MAPElites:
 
         # update the metrics
         metrics = self._metrics_function(repertoire)
-
+        metrics = self._emitter.update_added_counts(container_addition_metrics, metrics)
+        
         return repertoire, emitter_state, metrics, random_key
 
     @partial(jax.jit, static_argnames=("self",))
