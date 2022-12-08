@@ -1,6 +1,6 @@
 hydra:
     run:
-        dir: ./results/${env_name}/${hydra.job.name}/${seed}
+        dir: ./results/${env_name}/${hydra.job.name}/${now:%Y-%m-%d_%H%M%S}_${seed}
 
 # Env config
 seed: 42
