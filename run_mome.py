@@ -211,7 +211,6 @@ class RunMOME:
             timings["avg_iteration_time"] = (timings["avg_iteration_time"]*(iteration*self.metrics_log_period) + timelapse) / ((iteration+1)*self.metrics_log_period)
             timings["avg_evalps"] = (timings["avg_evalps"]*(iteration*self.metrics_log_period) + ((self.batch_size*self.metrics_log_period)/timelapse)) / ((iteration+1)*self.metrics_log_period)
             timings["runtime_logs"] = timings["runtime_logs"].at[iteration, 0].set(total_algorithm_duration)
-
             if iteration % self.metrics_log_period == 0:
                 logger.warning(f"------ Iteration {iteration+1} out of {self.num_iterations} ------")
 
@@ -221,13 +220,14 @@ class RunMOME:
 
             # Save plot of repertoire every plot_repertoire_period iterations
             if iteration % self.plot_repertoire_period == 0:
-                self.plot_repertoire(
-                    repertoire,
-                    centroids,
-                    metrics,
-                    save_dir=_repertoire_plots_save_dir,
-                    save_name=f"{iteration}",
-                )
+                if self.num_descriptor_dimensions == 2:
+                    self.plot_repertoire(
+                        repertoire,
+                        centroids,
+                        metrics,
+                        save_dir=_repertoire_plots_save_dir,
+                        save_name=f"{iteration}",
+                    )
             
             # Save latest repertoire and metrics every 'checkpoint_period' iterations
             if iteration % self.checkpoint_period == 0:
@@ -289,13 +289,14 @@ class RunMOME:
             )
 
         # Save final plots
-        self.plot_repertoire(
-            repertoire,
-            centroids,
-            metrics,
-            save_dir=_final_plots_dir,
-            save_name="final",
-        )
+        if self.num_descriptor_dimensions == 2:
+            self.plot_repertoire(
+                repertoire,
+                centroids,
+                metrics,
+                save_dir=_final_plots_dir,
+                save_name="final",
+            )
 
         self.plot_scores_evolution(
             metrics_history,
