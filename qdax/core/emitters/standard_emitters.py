@@ -1,12 +1,12 @@
 from functools import partial
-from typing import Callable, Optional, Tuple
+from typing import Callable, Optional, Tuple, List
 
 import jax
 import jax.numpy as jnp
 
 from qdax.core.containers.repertoire import Repertoire
 from qdax.core.emitters.emitter import Emitter, EmitterState
-from qdax.types import Genotype, RNGKey
+from qdax.types import Genotype, RNGKey, Metrics
 
 
 class MixingEmitter(Emitter):
@@ -81,3 +81,26 @@ class MixingEmitter(Emitter):
             the batch size emitted by the emitter.
         """
         return self._batch_size
+
+    @partial(jax.jit, static_argnames=("self",))   
+    def update_added_counts(
+        self,
+        container_addition_metrics: List,
+        metrics: Metrics,
+    ):
+
+        n_variation = int(self._batch_size * self._variation_percentage)
+        n_mutation = self._batch_size - n_variation
+
+        added_list = container_addition_metrics[0]
+        removed_list = container_addition_metrics[1]
+
+        metrics["removed_count"] = jnp.sum(removed_list)
+
+        variation_added_list = added_list[:n_variation]
+        mutation_added_list = added_list[n_variation+1:]
+
+        metrics[f'emitter_variation_count:'] = jnp.sum(variation_added_list)
+        metrics[f'emitter_mutation_count:'] = jnp.sum(mutation_added_list)
+
+        return metrics
