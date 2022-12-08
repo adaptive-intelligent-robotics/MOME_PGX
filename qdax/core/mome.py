@@ -49,7 +49,7 @@ class MOME(MAPElites):
         )
 
         # init the repertoire
-        repertoire = MOMERepertoire.init(
+        repertoire, container_addition_metrics = MOMERepertoire.init(
             genotypes=init_genotypes,
             fitnesses=fitnesses,
             descriptors=descriptors,
@@ -71,5 +71,9 @@ class MOME(MAPElites):
             descriptors=descriptors,
             extra_scores=extra_scores,
         )
+        
+        # update the metrics
+        metrics = self._metrics_function(repertoire)
+        metrics = self._emitter.update_added_counts(container_addition_metrics, metrics)
 
-        return repertoire, emitter_state, random_key
+        return repertoire, metrics, emitter_state, random_key

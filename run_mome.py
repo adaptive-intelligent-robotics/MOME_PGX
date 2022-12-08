@@ -165,7 +165,7 @@ class RunMOME:
         algorithm_start_time = time.time()
 
         # Initialize repertoire and emitter state
-        repertoire, emitter_state, random_key = mome.init(
+        repertoire, init_metrics, emitter_state, random_key = mome.init(
             init_genotypes,
             centroids,
             self.pareto_front_max_length,
@@ -175,7 +175,6 @@ class RunMOME:
         initial_repertoire_time = time.time() - algorithm_start_time
         total_algorithm_duration += initial_repertoire_time
         logger.warning("--- Initialised initial repertoire ---")
-        logger.warning("--- Starting the algorithm main process ---")
 
         timings = {"initial_repertoire_time": initial_repertoire_time,
                     "centroids_init_time": centroids_init_time,
@@ -184,21 +183,16 @@ class RunMOME:
                     "avg_evalps": 0.0}
 
 
-        metrics_history = {
-                "hypervolumes": jnp.zeros((1, self.num_centroids)),
-                "moqd_score": jnp.array([0.0]), 
-                "max_hypervolume": jnp.array([0.0]), 
-                "max_scores": jnp.zeros((1, self.num_objective_functions)),
-                "max_sum_scores": jnp.array([0.0]), 
-                "coverage": jnp.array([0.0]), 
-                "number_solutions": jnp.array([0.0]), 
-                "global_hypervolume": jnp.array([0.0]), 
-        }
+        # Store initial repertoire metrics and convert to jnp.arrays
+        metrics_history = init_metrics.copy()
+        for k, v in metrics_history.items():
+            metrics_history[k] = jnp.expand_dims(jnp.array(v), axis=0)
+        
 
-
+        logger.warning("--- Starting the algorithm main process ---")
+       
         # Run the algorithm
         for iteration in range(self.num_iterations):
-
             start_time = time.time()
 
             # 'Log period' number of QD itertions
@@ -214,17 +208,16 @@ class RunMOME:
 
             metrics_history = {key: jnp.concatenate((metrics_history[key], metrics[key]), axis=0) for key in metrics}
 
+            timings["avg_iteration_time"] = (timings["avg_iteration_time"]*(iteration*self.metrics_log_period) + timelapse) / ((iteration+1)*self.metrics_log_period)
+            timings["avg_evalps"] = (timings["avg_evalps"]*(iteration*self.metrics_log_period) + ((self.batch_size*self.metrics_log_period)/timelapse)) / ((iteration+1)*self.metrics_log_period)
+            timings["runtime_logs"] = timings["runtime_logs"].at[iteration, 0].set(total_algorithm_duration)
+
             if iteration % self.metrics_log_period == 0:
                 logger.warning(f"------ Iteration {iteration+1} out of {self.num_iterations} ------")
 
                 logger.warning(f"--- MOQD Score: {metrics['moqd_score'][-1]:.2f}")
                 logger.warning(f"--- Coverage: {metrics['coverage'][-1]:.2f}%")
                 logger.warning("--- Max Fitnesses:" +  str(metrics['max_scores'][-1]))
-
-                timings["avg_iteration_time"] = (timings["avg_iteration_time"]*(iteration*self.metrics_log_period) + timelapse) / ((iteration+1)*self.metrics_log_period)
-                timings["avg_evalps"] = (timings["avg_evalps"]*(iteration*self.metrics_log_period) + ((self.batch_size*self.metrics_log_period)/timelapse)) / ((iteration+1)*self.metrics_log_period)
-                timings["runtime_logs"] = timings["runtime_logs"].at[iteration, 0].set(total_algorithm_duration)
-
 
             # Save plot of repertoire every plot_repertoire_period iterations
             if iteration % self.plot_repertoire_period == 0:
