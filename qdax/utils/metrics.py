@@ -128,7 +128,7 @@ def default_moqd_metrics(
 
     # Calculate metrics
     moqd_score = jnp.sum(repertoire_not_empty * hypervolumes)
-    max_hypervolume = jnp.max(moqd_score)
+    max_hypervolume = jnp.max(hypervolumes)
     max_scores = jnp.max(repertoire.fitnesses, axis=(0, 1))
     max_sum_scores = jnp.max(jnp.sum(repertoire.fitnesses, axis=-1), axis=(0, 1))
     num_solutions = jnp.sum(~repertoire_empty)
