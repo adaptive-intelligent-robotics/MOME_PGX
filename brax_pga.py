@@ -21,6 +21,7 @@ class ExperimentConfig:
     # Env config
     seed: int
     env_name: str
+    fixed_init_state: bool
     episode_length: int
 
     # Initialisation parameters
@@ -73,7 +74,9 @@ def main(config: ExperimentConfig) -> None:
     num_iterations = config.num_evaluations // config.env_batch_size
 
     # Init environment
-    env = environments.create(config.env_name, episode_length=config.episode_length)
+    env = environments.create(config.env_name, 
+        episode_length=config.episode_length, 
+        fixed_init_state=config.fixed_init_state)
     
     # Init a random key
     random_key = jax.random.PRNGKey(config.seed)

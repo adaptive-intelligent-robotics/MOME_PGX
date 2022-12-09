@@ -5,6 +5,7 @@ hydra:
 # Env config
 seed: 42
 env_name: walker2d_multi
+fixed_init_state: True
 episode_length: 1000
 
 # MOME parameters

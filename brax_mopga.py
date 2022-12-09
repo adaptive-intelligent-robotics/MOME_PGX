@@ -22,6 +22,7 @@ class ExperimentConfig:
     # Env config
     seed: int
     env_name: str
+    fixed_init_state: bool 
     episode_length: int
 
     # MOO parameters
@@ -79,7 +80,7 @@ def main(config: ExperimentConfig) -> None:
     batch_size = config.mutation_ga_batch_size + config.mutation_qpg_batch_size * config.num_objective_functions
 
     # Init environment
-    env = environments.create(config.env_name, episode_length=config.episode_length)
+    env = environments.create(config.env_name, episode_length=config.episode_length, fixed_init_state=config.fixed_init_state)
     
     # Init a random key
     random_key = jax.random.PRNGKey(config.seed)

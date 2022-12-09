@@ -6,6 +6,7 @@ hydra:
 # Env config
 seed: 42
 env_name: walker2d_uni
+fixed_init_state: True
 episode_length: 1000
 
 # Initialisation parameters

@@ -10,6 +10,7 @@ from qdax.environments.bd_extractors import (
     get_final_xy_position,
 )
 from qdax.environments.exploration_wrappers import MazeWrapper, TrapWrapper
+from qdax.environments.init_state_wrapper import FixedInitialStateWrapper
 from qdax.environments.locomotion_wrappers import (
     FeetContactWrapper,
     MultiObjectiveRewardWrapper,
@@ -149,6 +150,7 @@ def create(
     auto_reset: bool = True,
     batch_size: Optional[int] = None,
     eval_metrics: bool = False,
+    fixed_init_state: bool = False,
     qdax_wrappers_kwargs: Optional[List] = None,
     **kwargs: Any,
 ) -> Union[brax.envs.env.Env, QDEnv]:
@@ -181,6 +183,12 @@ def create(
         env = brax.envs.wrappers.EpisodeWrapper(env, episode_length, action_repeat)
     if batch_size:
         env = brax.envs.wrappers.VectorWrapper(env, batch_size)
+    if fixed_init_state:
+        # retrieve the base env
+        if env_name not in _qdax_custom_envs.keys():
+            base_env_name = env_name
+        # wrap the env
+        env = FixedInitialStateWrapper(env, base_env_name=base_env_name)  # type: ignore
     if auto_reset:
         env = brax.envs.wrappers.AutoResetWrapper(env)
         if env_name in _qdax_custom_envs.keys():
