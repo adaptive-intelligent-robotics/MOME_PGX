@@ -2,6 +2,7 @@ import hydra
 import jax.numpy as jnp
 import jax
 
+from brax_step_functions import play_mo_step_fn
 from dataclasses import dataclass
 from functools import partial
 from typing import Tuple
@@ -105,35 +106,12 @@ def main(config: ExperimentConfig) -> None:
     reset_fn = jax.jit(jax.vmap(env.reset))
     init_states = reset_fn(keys)
 
-    # TO DO: save init_state
-
-    # Define the function to play a step with the policy in the environment
-    def play_step_fn(
-        env_state,
-        policy_params,
-        random_key,
-    ):
-        """
-        Play an environment step and return the updated state and the transition.
-        """
-
-        actions = policy_network.apply(policy_params, env_state.obs)
-        
-        state_desc = env_state.info["state_descriptor"]
-        next_state = env.step(env_state, actions)
-
-        transition = QDTransition(
-            obs=env_state.obs,
-            next_obs=next_state.obs,
-            rewards=next_state.reward,
-            dones=next_state.done,
-            actions=actions,
-            truncations=next_state.info["truncation"],
-            state_desc=state_desc,
-            next_state_desc=next_state.info["state_descriptor"],
-        )
-
-        return next_state, policy_params, random_key, transition
+    # TO DO: save init_state  
+    play_step_fn = partial(
+        play_mo_step_fn,
+        policy_network=policy_network,
+        env=env,
+    )  
 
     # Define a metrics function
     metrics_function = partial(
