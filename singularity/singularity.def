@@ -53,6 +53,21 @@ From: airl_lab/default/airl_env:qdax_f57720d0
     echo
     python3 brax_mome.py "$@"
 
+%apprun brax_spea2
+    cd /project/
+    # Running the scrpt
+    echo
+    echo "Running python3 brax_spea2.py "$@" "
+    echo
+    python3 brax_spea2.py "$@"
+
+%apprun brax_nsga2
+    cd /project/
+    # Running the scrpt
+    echo
+    echo "Running python3 brax_nsga2.py "$@" "
+    echo
+    python3 brax_nsga2.py "$@"
 
 %help
     This is the development and running environment of QDax
