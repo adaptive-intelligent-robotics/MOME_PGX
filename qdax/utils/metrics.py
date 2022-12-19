@@ -66,9 +66,11 @@ def default_ga_metrics(
 
     # get metrics
     max_fitness = jnp.max(repertoire.fitnesses, axis=0)
+    population_size = repertoire.size
 
     return {
-        "max_fitness": max_fitness,
+        "ga_max_fitness": max_fitness,
+        "ga_population_size": population_size,
     }
 
 
