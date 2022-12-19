@@ -5,8 +5,9 @@ from typing import Any, Callable, Optional, Tuple
 import jax
 
 from qdax.core.containers.ga_repertoire import GARepertoire
+from qdax.core.containers.mome_repertoire import MOMERepertoire
 from qdax.core.emitters.emitter import Emitter, EmitterState
-from qdax.types import ExtraScores, Fitness, Genotype, Metrics, RNGKey
+from qdax.types import ExtraScores, Fitness, Genotype, Metrics, RNGKey, Centroid
 
 
 class GeneticAlgorithm:
@@ -31,16 +32,24 @@ class GeneticAlgorithm:
             [Genotype, RNGKey], Tuple[Fitness, ExtraScores, RNGKey]
         ],
         emitter: Emitter,
-        metrics_function: Callable[[GARepertoire], Metrics],
+        moqd_metrics_function: Callable[[MOMERepertoire], Metrics],
+        ga_metrics_function: Callable[[GARepertoire], Metrics],
+
     ) -> None:
         self._scoring_function = scoring_function
         self._emitter = emitter
-        self._metrics_function = metrics_function
+        self._moqd_metrics_function = moqd_metrics_function
+        self._ga_metrics_function = ga_metrics_function
 
     @partial(jax.jit, static_argnames=("self", "population_size"))
     def init(
-        self, init_genotypes: Genotype, population_size: int, random_key: RNGKey
-    ) -> Tuple[GARepertoire, Optional[EmitterState], RNGKey]:
+        self, 
+        init_genotypes: Genotype, 
+        population_size: int, 
+        centroids: Centroid,
+        pareto_front_max_length: int,
+        random_key: RNGKey
+    ) -> Tuple[GARepertoire, Optional[MOMERepertoire], Optional[EmitterState], RNGKey]:
         """Initialize a GARepertoire with an initial population of genotypes.
 
         Args:
@@ -53,7 +62,7 @@ class GeneticAlgorithm:
         """
 
         # score initial genotypes
-        fitnesses, extra_scores, random_key = self._scoring_function(
+        fitnesses, descriptors, extra_scores, random_key = self._scoring_function(
             init_genotypes, random_key
         )
 
@@ -63,6 +72,15 @@ class GeneticAlgorithm:
             fitnesses=fitnesses,
             population_size=population_size,
         )
+
+        # init the passive MOQD repertoire for comparison
+        moqd_passive_repertoire, container_addition_metrics = MOMERepertoire.init(
+                        genotypes=init_genotypes,
+                        fitnesses=fitnesses,
+                        descriptors=descriptors,
+                        centroids=centroids,
+                        pareto_front_max_length=pareto_front_max_length,
+                    )
 
         # get initial state of the emitter
         emitter_state, random_key = self._emitter.init(
@@ -79,15 +97,22 @@ class GeneticAlgorithm:
             extra_scores=extra_scores,
         )
 
-        return repertoire, emitter_state, random_key
+        moqd_metrics = self._moqd_metrics_function(self.moqd_passive_repertoire)
+        moqd_metrics = self._emitter.update_added_counts(container_addition_metrics, moqd_metrics)
+        ga_metrics = self._ga_metrics_function(repertoire)
+
+        metrics  = {**moqd_metrics,  **ga_metrics}
+
+        return repertoire, moqd_passive_repertoire, emitter_state, metrics, random_key
 
     @partial(jax.jit, static_argnames=("self",))
     def update(
         self,
         repertoire: GARepertoire,
+        moqd_passive_repertoire: Optional[MOMERepertoire],
         emitter_state: Optional[EmitterState],
         random_key: RNGKey,
-    ) -> Tuple[GARepertoire, Optional[EmitterState], Metrics, RNGKey]:
+    ) -> Tuple[GARepertoire, Optional[MOMERepertoire], Optional[EmitterState], Metrics, RNGKey]:
         """
         Performs one iteration of a Genetic algorithm.
         1. A batch of genotypes is sampled in the repertoire and the genotypes
@@ -113,12 +138,19 @@ class GeneticAlgorithm:
         )
 
         # score the offsprings
-        fitnesses, extra_scores, random_key = self._scoring_function(
+        fitnesses, descriptors, extra_scores, random_key = self._scoring_function(
             genotypes, random_key
         )
 
         # update the repertoire
         repertoire = repertoire.add(genotypes, fitnesses)
+
+        # update the passive repertoire
+        moqd_passive_repertoire, container_addition_metrics = moqd_passive_repertoire.add(
+            genotypes,
+            descriptors,
+            fitnesses,
+        )
 
         # update emitter state after scoring is made
         emitter_state = self._emitter.state_update(
@@ -131,16 +163,19 @@ class GeneticAlgorithm:
         )
 
         # update the metrics
-        metrics = self._metrics_function(repertoire)
+        moqd_metrics = self._moqd_metrics_function(moqd_passive_repertoire)
+        moqd_metrics = self._emitter.update_added_counts(container_addition_metrics, moqd_metrics)
+        ga_metrics = self._ga_metrics_function(repertoire)
+        metrics  = {**moqd_metrics,  **ga_metrics}
 
-        return repertoire, emitter_state, metrics, random_key
+        return repertoire, moqd_passive_repertoire, emitter_state, metrics, random_key
 
     @partial(jax.jit, static_argnames=("self",))
     def scan_update(
         self,
-        carry: Tuple[GARepertoire, Optional[EmitterState], RNGKey],
+        carry: Tuple[GARepertoire, Optional[MOMERepertoire], Optional[EmitterState], RNGKey],
         unused: Any,
-    ) -> Tuple[Tuple[GARepertoire, Optional[EmitterState], RNGKey], Metrics]:
+    ) -> Tuple[Tuple[GARepertoire, Optional[MOMERepertoire], Optional[EmitterState], RNGKey], Metrics]:
         """Rewrites the update function in a way that makes it compatible with the
         jax.lax.scan primitive.
 
@@ -153,9 +188,10 @@ class GeneticAlgorithm:
             The updated repertoire and emitter state, with a new random key and metrics.
         """
         # iterate over grid
-        repertoire, emitter_state, random_key = carry
-        repertoire, emitter_state, metrics, random_key = self.update(
-            repertoire, emitter_state, random_key
+        repertoire, moqd_passive_repertoire, emitter_state, random_key = carry
+
+        repertoire, moqd_passive_repertoire, emitter_state, metrics, random_key = self.update(
+            repertoire, moqd_passive_repertoire, emitter_state, random_key
         )
 
-        return (repertoire, emitter_state, random_key), metrics
+        return (repertoire, moqd_passive_repertoire, emitter_state, random_key), metrics
