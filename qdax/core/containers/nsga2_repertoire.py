@@ -6,7 +6,7 @@ import jax
 import jax.numpy as jnp
 
 from qdax.core.containers.ga_repertoire import GARepertoire
-from qdax.types import Fitness, Genotype
+from qdax.types import Fitness, Genotype, Descriptor
 from qdax.utils.pareto_front import compute_masked_pareto_front
 
 
@@ -82,7 +82,9 @@ class NSGA2Repertoire(GARepertoire):
 
     @jax.jit
     def add(
-        self, batch_of_genotypes: Genotype, batch_of_fitnesses: Fitness
+        self, 
+        batch_of_genotypes: Genotype, 
+        batch_of_fitnesses: Fitness
     ) -> NSGA2Repertoire:
         """Implements the repertoire addition rules.
 
@@ -105,6 +107,9 @@ class NSGA2Repertoire(GARepertoire):
         Returns:
             The updated repertoire.
         """
+        # Initialnumber of solutions:
+        #original_population_size = self.size
+
         # All the candidates
         candidates = jax.tree_util.tree_map(
             lambda x, y: jnp.concatenate((x, y), axis=0),
@@ -242,4 +247,7 @@ class NSGA2Repertoire(GARepertoire):
 
         new_repertoire = self.replace(genotypes=new_candidates, fitnesses=new_scores)
 
-        return new_repertoire  # type: ignore
+        #added_list = to_keep_index[original_population_size:]
+        #removed_count = original_population_size - jnp.sum(to_keep_index[:original_population_size])
+
+        return new_repertoire #[added_list, removed_count] # type: ignore

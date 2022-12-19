@@ -12,6 +12,7 @@ import jax
 
 from qdax.baselines.genetic_algorithm import GeneticAlgorithm
 from qdax.core.containers.nsga2_repertoire import NSGA2Repertoire
+from qdax.core.containers.mome_repertoire import MOMERepertoire
 from qdax.core.emitters.emitter import EmitterState
 from qdax.types import Genotype, RNGKey
 
@@ -26,13 +27,18 @@ class NSGA2(GeneticAlgorithm):
     Link to paper: https://ieeexplore.ieee.org/document/996017
     """
 
-    @partial(jax.jit, static_argnames=("self", "population_size"))
+    @partial(jax.jit, static_argnames=("self", "population_size", "pareto_front_max_length"))
     def init(
-        self, init_genotypes: Genotype, population_size: int, random_key: RNGKey
-    ) -> Tuple[NSGA2Repertoire, Optional[EmitterState], RNGKey]:
+        self, 
+        init_genotypes: Genotype, 
+        population_size: int, 
+        random_key: RNGKey,
+        centroids: Centroid,
+        pareto_front_max_length: int,
+    ) -> Tuple[NSGA2Repertoire, Optional[MOMERepertoire], Optional[EmitterState], RNGKey]:
 
         # score initial genotypes
-        fitnesses, extra_scores, random_key = self._scoring_function(
+        fitnesses, descriptors, extra_scores, random_key = self._scoring_function(
             init_genotypes, random_key
         )
 
@@ -42,6 +48,15 @@ class NSGA2(GeneticAlgorithm):
             fitnesses=fitnesses,
             population_size=population_size,
         )
+
+        # init the passive MOQD repertoire for comparison
+        moqd_passive_repertoire, container_addition_metrics = MOMERepertoire.init(
+                        genotypes=init_genotypes,
+                        fitnesses=fitnesses,
+                        descriptors=descriptors,
+                        centroids=centroids,
+                        pareto_front_max_length=pareto_front_max_length,
+                    )
 
         # get initial state of the emitter
         emitter_state, random_key = self._emitter.init(
@@ -54,7 +69,15 @@ class NSGA2(GeneticAlgorithm):
             repertoire=repertoire,
             genotypes=init_genotypes,
             fitnesses=fitnesses,
+            descriptors=None,
             extra_scores=extra_scores,
         )
 
-        return repertoire, emitter_state, random_key
+
+        moqd_metrics = self._moqd_metrics_function(moqd_passive_repertoire)
+        moqd_metrics = self._emitter.update_added_counts(container_addition_metrics, moqd_metrics)
+        ga_metrics = self._ga_metrics_function(repertoire)
+
+        metrics  = {**moqd_metrics,  **ga_metrics}
+
+        return repertoire, moqd_passive_repertoire, emitter_state, metrics, random_key
