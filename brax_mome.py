@@ -14,9 +14,8 @@ from qdax.core.emitters.mutation_operators import (
 )
 from qdax.core.emitters.standard_emitters import MixingEmitter
 from qdax.core.neuroevolution.mdp_utils import scoring_function
-from qdax.core.neuroevolution.buffers.buffer import QDTransition
 from qdax.core.neuroevolution.networks.networks import MLP
-from qdax.utils.metrics import CSVLogger, default_moqd_metrics
+from qdax.utils.metrics import default_moqd_metrics
 
 @dataclass
 class ExperimentConfig:

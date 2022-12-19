@@ -1,6 +1,4 @@
 import csv
-import chex
-import flax
 import hydra
 import jax.numpy as jnp
 import jax
@@ -9,25 +7,17 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import os
 import pandas as pd
-import pickle
 import time
 import visu_brax
 
 from dataclasses import dataclass
-from functools import partial
-from hydra.core.config_store import ConfigStore
 from typing import Callable, Dict, Optional, Tuple
-from qdax.core.containers.mapelites_repertoire import compute_cvt_centroids, MapElitesRepertoire
+from qdax.core.containers.mapelites_repertoire import compute_cvt_centroids
 from qdax.core.emitters.emitter import Emitter
-from qdax.core.emitters.mutation_operators import (
-    polynomial_mutation, 
-    polynomial_crossover, 
-)
-from qdax.core.emitters.standard_emitters import MixingEmitter
 from qdax.core.mome import MOME, MOMERepertoire
 from qdax.core.neuroevolution.networks.networks import MLP
 from qdax.environments.base_wrappers import QDEnv
-from qdax.types import Fitness, Descriptor, RNGKey, ExtraScores, Genotype, Centroid
+from qdax.types import Fitness, Descriptor, RNGKey, Genotype, Centroid
 from qdax.utils.plotting import ( 
     plot_2d_map_elites_repertoire, 
     plot_mome_max_scores_evolution,

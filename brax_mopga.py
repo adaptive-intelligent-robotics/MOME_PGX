@@ -10,10 +10,9 @@ from run_mome import RunMOME
 from qdax import environments
 from qdax.core.emitters.pga_me_emitter import PGAMEConfig, PGAMEEmitter
 from qdax.core.neuroevolution.mdp_utils import scoring_function
-from qdax.core.neuroevolution.buffers.buffer import QDTransition
 from qdax.core.neuroevolution.networks.networks import MLP
 from qdax.core.emitters.mutation_operators import isoline_variation
-from qdax.utils.metrics import CSVLogger, default_moqd_metrics
+from qdax.utils.metrics import default_moqd_metrics
 
 
 @dataclass
