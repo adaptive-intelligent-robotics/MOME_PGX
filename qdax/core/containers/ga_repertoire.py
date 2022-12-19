@@ -51,8 +51,8 @@ class GARepertoire(Repertoire):
         # flatten all the genotypes
         flat_genotypes = jax.vmap(flatten_genotype)(self.genotypes)
 
-        jnp.save(path + "genotypes.npy", flat_genotypes)
-        jnp.save(path + "scores.npy", self.fitnesses)
+        jnp.save(path + "ga_genotypes.npy", flat_genotypes)
+        jnp.save(path + "ga_scores.npy", self.fitnesses)
 
     @classmethod
     def load(cls, reconstruction_fn: Callable, path: str = "./") -> GARepertoire:
@@ -67,10 +67,10 @@ class GARepertoire(Repertoire):
             A GA Repertoire.
         """
 
-        flat_genotypes = jnp.load(path + "genotypes.npy")
+        flat_genotypes = jnp.load(path + "ga_genotypes.npy")
         genotypes = jax.vmap(reconstruction_fn)(flat_genotypes)
 
-        fitnesses = jnp.load(path + "fitnesses.npy")
+        fitnesses = jnp.load(path + "ga_fitnesses.npy")
 
         return cls(
             genotypes=genotypes,
