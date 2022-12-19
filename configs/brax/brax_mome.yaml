@@ -17,7 +17,7 @@ reference_point: [0, -10]
 batch_size: 256
 num_evaluations: 1024000
 num_init_cvt_samples: 50000 
-num_centroids: 1024 
+num_centroids: 128 
 
 # Brax parameters
 num_descriptor_dimensions: 2
