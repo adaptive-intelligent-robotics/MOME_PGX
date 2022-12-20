@@ -2,8 +2,6 @@ import csv
 import jax.numpy as jnp
 import jax
 import logging
-import matplotlib as mpl
-import matplotlib.pyplot as plt
 import os
 import pandas as pd
 import time
@@ -11,6 +9,7 @@ import visu_brax
 
 from dataclasses import dataclass
 from typing import Callable, Dict, Optional, Tuple
+from plotting_fns import Plotter
 
 from qdax.core.containers.mapelites_repertoire import compute_cvt_centroids
 from qdax.core.containers.mome_repertoire import MOMERepertoire
@@ -19,12 +18,7 @@ from qdax.baselines.nsga2 import NSGA2
 from qdax.core.neuroevolution.networks.networks import MLP
 from qdax.environments.base_wrappers import QDEnv
 from qdax.types import Fitness, Descriptor, RNGKey, ExtraScores, Genotype, Centroid
-from qdax.utils.plotting import ( 
-    plot_2d_map_elites_repertoire, 
-    plot_mome_max_scores_evolution,
-    plot_mome_pareto_fronts,
-    plot_mome_scores_evolution,
-)
+
 
 
 class RunNSGA2:
@@ -109,6 +103,7 @@ class RunNSGA2:
 
         # Name save directories
         _repertoire_plots_save_dir = os.path.join(output_dir, "checkpoints", "repertoires", "plots")
+        _repertoire_num_sols_save_dir = os.path.join(output_dir, "checkpoints", "repertoires", "num_sols")    
         _metrics_dir = os.path.join(output_dir, "checkpoints")
         _final_metrics_dir = os.path.join(output_dir, "final", "metrics")
         _final_plots_dir = os.path.join(output_dir, "final", "plots")
@@ -116,6 +111,7 @@ class RunNSGA2:
 
         # Create save directories
         os.makedirs(_repertoire_plots_save_dir, exist_ok=True)
+        os.makedirs(_repertoire_num_sols_save_dir, exist_ok=True)
         os.makedirs(_metrics_dir, exist_ok=True)
         os.makedirs(_final_metrics_dir, exist_ok=True)
         os.makedirs(_final_plots_dir, exist_ok=True)
@@ -129,8 +125,18 @@ class RunNSGA2:
         if self.save_final_visualisations:
             _final_visualisation_dir = os.path.join(output_dir, "final", "visualisations")
             os.makedirs(_final_visualisation_dir)
-    
-        # Instantiate MOME
+
+        # Instantiate plotter 
+        plotter = Plotter(
+            minval=self.minval,
+            maxval=self.maxval,
+            pareto_front_max_length=self.pareto_front_max_length,
+            batch_size=self.batch_size,
+            num_iterations=self.num_iterations,
+            episode_length=self.episode_length,
+        )
+
+        # Instantiate NSGA2
         nsga2 = NSGA2(
             scoring_function=self.scoring_fn,
             emitter=self.emitter,
@@ -218,13 +224,19 @@ class RunNSGA2:
             if iteration % self.plot_repertoire_period == 0:
                 if self.num_descriptor_dimensions == 2:
 
-                    self.plot_repertoire(
+                    plotter.plot_repertoire(
                         moqd_passive_repertoire,
                         centroids,
                         metrics,
                         save_dir=_repertoire_plots_save_dir,
                         save_name=f"{iteration}",
                     )
+                    plotter.plot_num_solutions(
+                        centroids,
+                        metrics,
+                        save_dir=_repertoire_num_sols_save_dir,
+                        save_name=f"{iteration}",
+                    )                    
             
             # Save latest repertoire and metrics every 'checkpoint_period' iterations
             if iteration % self.checkpoint_period == 0:
@@ -289,99 +301,28 @@ class RunNSGA2:
 
         # Save final plots
         if self.num_descriptor_dimensions == 2:
-            self.plot_repertoire(
+            plotter.plot_repertoire(
                 moqd_passive_repertoire,
                 centroids,
                 metrics,
                 save_dir=_final_plots_dir,
                 save_name="final",
             )
+            plotter.plot_num_solutions(
+                        centroids,
+                        metrics,
+                        save_dir=_final_plots_dir,
+                        save_name=f"final",
+            )            
 
-        self.plot_scores_evolution(
+        plotter.plot_scores_evolution(
             metrics_history,
             save_dir=_final_plots_dir
-
         )
 
-        self.plot_max_scores_evolution(
+        plotter.plot_max_scores_evolution(
             metrics_history,
             save_dir=_final_plots_dir
-
         )
 
         return moqd_passive_repertoire, centroids, random_key, metrics, metrics_history
-
-
-    def plot_repertoire(
-        self,
-        repertoire: MOMERepertoire,
-        centroids: Centroid,
-        metrics: Dict,
-        save_dir: str="./",
-        save_name: str="",
-    ) -> None:
-        
-        fig, axes = plt.subplots(figsize=(18, 6), ncols=3)
-
-        # plot pareto fronts
-        axes = plot_mome_pareto_fronts(
-            centroids,
-            repertoire,
-            minval=self.minval,
-            maxval=self.maxval,
-            color_style='spectral',
-            axes=axes,
-            with_global=True
-        )
-
-        # add map elites plot on last axes
-        fig, axes = plot_2d_map_elites_repertoire(
-            centroids=centroids,
-            repertoire_fitnesses=metrics["hypervolumes"][-1],
-            minval=self.minval,
-            maxval=self.maxval,
-            ax=axes[2]
-        )
-
-        plt.savefig(os.path.join(save_dir, f"repertoire_{save_name}"))
-        plt.close()
-    
-    def plot_scores_evolution(
-        self,
-        metrics_history: Dict,
-        save_dir: str="./",
-    ) -> None:
-        
-        fig, axes = plt.subplots(figsize=(18, 6), ncols=2)
-
-        axes = plot_mome_scores_evolution(
-            metrics_history=metrics_history,
-            ax=axes,
-            fig=fig,
-            batch_size=self.batch_size,
-            num_iterations=self.num_iterations,
-            episode_length=self.episode_length,
-        )
-
-        plt.savefig(os.path.join(save_dir, "scores_evolution"))
-        plt.close()
-
-    def plot_max_scores_evolution(
-        self,
-        metrics_history: Dict,
-        save_dir: str="./",
-    ) -> None:
-
-        fig, axes = plt.subplots(figsize=(18, 6), ncols=3)
-
-        axes = plot_mome_max_scores_evolution(
-            metrics_history=metrics_history,
-            ax=axes,
-            fig=fig,
-            batch_size=self.batch_size,
-            num_iterations=self.num_iterations,
-            episode_length=self.episode_length,
-        )
-
-        plt.savefig(os.path.join(save_dir, f"max_scores_evolution"))
-        plt.close()
