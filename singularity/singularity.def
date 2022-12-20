@@ -32,9 +32,9 @@ From: airl_lab/default/airl_env:qdax_f57720d0
    # Enter working directory
    cd /project/
 
-    if [ $SINGULARITY_SANDBOX -eq 0 ]; then
+    if [ $APPTAINER_SANDBOX -eq 0 ]; then
         git clone https://gitlab.doc.ic.ac.uk/AIRL/research_projects/hannah_janmohamed/mooqd.git .
-        git checkout $SINGULARITY_COMMIT
+        git checkout $APPTAINER_COMMIT
     fi
 
 %apprun brax_mopga
@@ -51,7 +51,7 @@ From: airl_lab/default/airl_env:qdax_f57720d0
     echo
     echo "Running python3 brax_mopga.py only_forward_emitter=True "$@" "
     echo
-    python3 brax_mopga.py "$@"
+    python3 brax_mopga.py only_forward_emitter=True "$@"
 
 %apprun brax_mopga_only_energy_emitter
     cd /project/
@@ -59,7 +59,7 @@ From: airl_lab/default/airl_env:qdax_f57720d0
     echo
     echo "Running python3 brax_mopga.py only_energy_emitter=True "$@" "
     echo
-    python3 brax_mopga.py "$@"
+    python3 brax_mopga.py only_energy_emitter=True "$@"
 
 %apprun brax_mome
     cd /project/
