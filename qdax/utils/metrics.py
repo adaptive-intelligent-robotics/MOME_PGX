@@ -118,7 +118,8 @@ def default_moqd_metrics(
     repertoire_empty = repertoire.fitnesses == -jnp.inf # num centroids x pareto-front length x num criteria
     repertoire_empty = jnp.all(repertoire_empty, axis=-1) # num centroids x pareto-front length
     repertoire_not_empty = ~repertoire_empty # num centroids x pareto-front length
-    num_solutions = jnp.sum(repertoire_not_empty)
+    num_solutions = jnp.sum(repertoire_not_empty, axis=-1)
+    total_num_solutions = jnp.sum(num_solutions)
     repertoire_not_empty = jnp.any(repertoire_not_empty, axis=-1) # num centroids
     coverage = 100 * jnp.mean(repertoire_not_empty)
 
@@ -133,7 +134,6 @@ def default_moqd_metrics(
     max_hypervolume = jnp.max(hypervolumes)
     max_scores = jnp.max(repertoire.fitnesses, axis=(0, 1))
     max_sum_scores = jnp.max(jnp.sum(repertoire.fitnesses, axis=-1), axis=(0, 1))
-    num_solutions = jnp.sum(~repertoire_empty)
     
     (
         pareto_front,
@@ -150,7 +150,8 @@ def default_moqd_metrics(
         "max_scores": max_scores,
         "max_sum_scores": max_sum_scores,
         "coverage": coverage,
-        "number_solutions": num_solutions,
+        "num_solutions": num_solutions,
+        "total_num_solutions": total_num_solutions,
         "global_hypervolume": global_hypervolume,
     }
 
