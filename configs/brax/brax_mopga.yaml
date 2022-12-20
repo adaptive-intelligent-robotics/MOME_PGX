@@ -53,3 +53,7 @@ soft_tau_update: 0.005
 policy_delay: 2
 num_critic_training_steps: 300 
 num_pg_training_steps: 100 
+
+# Ablation parameters
+only_forward_emitter: False
+only_energy_emitter: False

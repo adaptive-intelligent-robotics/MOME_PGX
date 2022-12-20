@@ -9,6 +9,7 @@ from typing import Tuple
 from run_mome import RunMOME
 from qdax import environments
 from qdax.core.emitters.pga_me_emitter import PGAMEConfig, PGAMEEmitter
+from qdax.core.emitters.pga_ablation_emitter import AblationPGAMEEmitter
 from qdax.core.neuroevolution.mdp_utils import scoring_function
 from qdax.core.neuroevolution.networks.networks import MLP
 from qdax.core.emitters.mutation_operators import isoline_variation
@@ -71,7 +72,9 @@ class ExperimentConfig:
     num_critic_training_steps: int 
     num_pg_training_steps: int 
 
-
+    # Ablation parameters
+    only_forward_emitter: bool
+    only_energy_emitter: bool
 
 
 @hydra.main(config_path="configs/brax/", config_name="brax_mopga")
@@ -157,12 +160,35 @@ def main(config: ExperimentConfig) -> None:
         num_pg_training_steps=config.num_pg_training_steps
     )
 
-    pg_emitter = PGAMEEmitter(
-        config=mopga_emitter_config,
-        policy_network=policy_network,
-        env=env,
-        variation_fn=variation_function,
-    )
+    if config.only_forward_emitter:
+        print("------ ONLY USING FORWARD MOTION EMITTER ------")
+        mopga_emitter_config.mutation_qpg_batch_size = config.mutation_qpg_batch_size * 2 
+        pg_emitter = AblationPGAMEEmitter(
+            config=mopga_emitter_config,
+            objective_index=0,
+            policy_network=policy_network,
+            env=env,
+            variation_fn=variation_function,
+        ) 
+
+    elif config.only_energy_emitter:
+        print("------ ONLY USING ENERGY MOTION EMITTER ------")
+        mopga_emitter_config.mutation_qpg_batch_size = config.mutation_qpg_batch_size * 2 
+        pg_emitter = AblationPGAMEEmitter(
+            config=mopga_emitter_config,
+            objective_index=1,
+            policy_network=policy_network,
+            env=env,
+            variation_fn=variation_function,
+        )  
+
+    else:
+        pg_emitter = PGAMEEmitter(
+            config=mopga_emitter_config,
+            policy_network=policy_network,
+            env=env,
+            variation_fn=variation_function,
+        )
 
     mome = RunMOME(
         pareto_front_max_length=config.pareto_front_max_length,
