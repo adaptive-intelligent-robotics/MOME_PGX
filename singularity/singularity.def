@@ -32,9 +32,9 @@ From: airl_lab/default/airl_env:qdax_f57720d0
    # Enter working directory
    cd /project/
 
-    if [ $APPTAINER_SANDBOX -eq 0 ]; then
+    if [ $SINGULARITY_SANDBOX -eq 0 ]; then
         git clone https://gitlab.doc.ic.ac.uk/AIRL/research_projects/hannah_janmohamed/mooqd.git .
-        git checkout $APPTAINER_COMMIT
+        git checkout $SINGULARITY_COMMIT
     fi
 
 %apprun brax_mopga
