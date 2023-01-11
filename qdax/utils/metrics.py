@@ -134,8 +134,6 @@ def default_moqd_metrics(
 
     ### Calculate normalised hypervolume metrics
     normalised_fitnesses = (repertoire.fitnesses - reference_point)/ (max_rewards - reference_point)
-    jax.debug.print("FITNESSES: {}", repertoire.fitnesses[60])
-    jax.debug.print("NORMALISED FITNESSES: {}", normalised_fitnesses[60])
     normalised_hypervolume_function = partial(compute_hypervolume, reference_point=jnp.zeros(reference_point.shape))
     normalised_hypervolumes = jax.vmap(normalised_hypervolume_function)(normalised_fitnesses)  # num centroids
     normalised_hypervolumes = jnp.where(repertoire_not_empty, normalised_hypervolumes, -jnp.inf)
@@ -158,6 +156,12 @@ def default_moqd_metrics(
     global_hypervolume = compute_hypervolume(
         pareto_front, reference_point=reference_point
     )
+
+    normalised_pareto_front = (pareto_front - reference_point)/ (max_rewards - reference_point)
+    normalised_global_hypervolume = compute_hypervolume(
+        normalised_pareto_front, reference_point=jnp.zeros(reference_point.shape)
+    )
+
     metrics = {
         "hypervolumes": hypervolumes,
         "normalised_hypervolumes": normalised_hypervolumes,
@@ -172,6 +176,7 @@ def default_moqd_metrics(
         "num_solutions": num_solutions,
         "total_num_solutions": total_num_solutions,
         "global_hypervolume": global_hypervolume,
+        "normalised_global_hypervolume": normalised_global_hypervolume,
     }
 
     return metrics
