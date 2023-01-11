@@ -18,6 +18,8 @@ num_centroids: 128
 num_objective_functions: 1
 num_descriptor_dimensions: 2
 policy_hidden_layer_sizes: [64, 64] 
+
+# Min and max val of BDs
 minval: 0. 
 maxval: 1.
 

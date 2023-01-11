@@ -10,7 +10,6 @@ episode_length: 1000
 
 # MO parameters
 num_objective_functions: 2
-reference_point: [0, -10]
 
 # MOME parameters (for creating passive archive)
 pareto_front_max_length: 50
@@ -29,13 +28,15 @@ num_evaluations: 1024000
 # Brax parameters
 num_descriptor_dimensions: 2
 policy_hidden_layer_sizes: [64, 64] 
+
+# Min and max val of BDs
 minval: 0. 
 maxval: 1.
 
 # Emitter parameters
 iso_sigma: 0.005 
 line_sigma: 0.05 
-proportion_to_mutate: 0.6 
+proportion_to_mutate: 0.6 # don't actually use this as purely crossover
 eta: 1 
 crossover_percentage: 1. 
 

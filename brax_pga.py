@@ -3,6 +3,7 @@ import jax.numpy as jnp
 import jax
 
 from dataclasses import dataclass
+from envs_setup import get_env_metrics
 from functools import partial
 from typing import Tuple
 from run_pga import RunPGA
@@ -77,7 +78,14 @@ def main(config: ExperimentConfig) -> None:
     env = environments.create(config.env_name, 
         episode_length=config.episode_length, 
         fixed_init_state=config.fixed_init_state)
-    
+
+    env_metrics = get_env_metrics(config.env_name,
+        episode_length=config.episode_length
+    )
+
+    reference_point = env_metrics["min_rewards"]
+    moqd_offset = env_metrics["max_rewards"]
+
     # Init a random key
     random_key = jax.random.PRNGKey(config.seed)
 

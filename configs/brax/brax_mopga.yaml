@@ -11,7 +11,6 @@ episode_length: 1000
 # MOO parameters
 num_objective_functions: 2
 pareto_front_max_length: 50
-reference_point: [0, -10]
 
 # Initialisation parameters
 num_evaluations: 1024000
@@ -21,6 +20,8 @@ num_centroids: 128
 # Brax parameters
 num_descriptor_dimensions: 2
 policy_hidden_layer_sizes: [64, 64] 
+
+# Min and max val of BDs
 minval: 0. 
 maxval: 1.
 

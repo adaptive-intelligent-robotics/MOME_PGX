@@ -4,6 +4,7 @@ import jax
 
 from brax_step_functions import play_mo_step_fn
 from dataclasses import dataclass
+from envs_setup import get_env_metrics
 from functools import partial
 from typing import Tuple
 from run_spea2 import RunSPEA2
@@ -29,7 +30,6 @@ class ExperimentConfig:
 
     # MO parameters
     num_objective_functions: int
-    reference_point: Tuple[int,...]
 
     # SPEA2 Params
     num_neighbours: int
@@ -69,7 +69,14 @@ def main(config: ExperimentConfig) -> None:
     env = environments.create(config.env_name, 
         episode_length=config.episode_length, 
         fixed_init_state=config.fixed_init_state)
-    
+
+    env_metrics = get_env_metrics(config.env_name,
+        episode_length=config.episode_length
+    )
+
+    reference_point = env_metrics["min_rewards"]
+    moqd_offset = env_metrics["max_rewards"]
+
     # Init a random key
     random_key = jax.random.PRNGKey(config.seed)
 
@@ -105,7 +112,7 @@ def main(config: ExperimentConfig) -> None:
     # Define a metrics function
     moqd_metrics_function = partial(
         default_moqd_metrics,
-        reference_point=jnp.array(config.reference_point)
+        reference_point=jnp.array(reference_point)
     )
 
     # Prepare the scoring function
