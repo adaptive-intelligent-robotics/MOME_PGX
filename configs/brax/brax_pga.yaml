@@ -32,7 +32,7 @@ proportion_mutation_ga: 0.5
 metrics_log_period: 50
 plot_repertoire_period: 100
 checkpoint_period: 50
-save_checkpoint_visualisations: False
+save_checkpoint_visualisations: True
 save_final_visualisations: True
 num_save_visualisations: 10
 
