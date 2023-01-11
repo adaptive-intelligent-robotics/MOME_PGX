@@ -129,7 +129,7 @@ def compute_hypervolume(
     sorted_front = (pareto_front[idx, :] - reference_point) * mask
 
     # compute area rectangles between successive points
-    sumdiff = jnp.abs((sorted_front[1:, 0] - sorted_front[:-1, 0])) * jnp.abs(sorted_front[1:, 1])
+    sumdiff = (sorted_front[1:, 0] - sorted_front[:-1, 0]) * sorted_front[1:, 1]
     #jax.debug.print("SAME {}:",jnp.all((((sorted_front[1:, 0] - sorted_front[:-1, 0])) * sorted_front[1:, 1])==sumdiff))
 
     # remove the irrelevant values - where a mask was applied
