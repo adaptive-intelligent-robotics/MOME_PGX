@@ -102,7 +102,9 @@ def default_qd_metrics(repertoire: MapElitesRepertoire, qd_offset: float) -> Met
 
 
 def default_moqd_metrics(
-    repertoire: MOMERepertoire, reference_point: jnp.ndarray
+    repertoire: MOMERepertoire, 
+    reference_point: jnp.ndarray,
+    max_rewards: jnp.ndarray,
 ) -> Metrics:
     """Compute the MOQD metric given a MOME repertoire and a reference point.
 
@@ -123,18 +125,31 @@ def default_moqd_metrics(
     repertoire_not_empty = jnp.any(repertoire_not_empty, axis=-1) # num centroids
     coverage = 100 * jnp.mean(repertoire_not_empty)
 
-    # Calculating hypervolumes
+    #### Calculate unnormalised hypervolume metrics
     hypervolume_function = partial(compute_hypervolume, reference_point=reference_point)
     hypervolumes = jax.vmap(hypervolume_function)(repertoire.fitnesses)  # num centroids
-    # Set empty cell hypervolumes = -inf
     hypervolumes = jnp.where(repertoire_not_empty, hypervolumes, -jnp.inf)
-
-    # Calculate metrics
     moqd_score = jnp.sum(repertoire_not_empty * hypervolumes)
     max_hypervolume = jnp.max(hypervolumes)
+
+    ### Calculate normalised hypervolume metrics
+    normalised_fitnesses = (repertoire.fitnesses - reference_point)/ (max_rewards - reference_point)
+    jax.debug.print("FITNESSES: {}", repertoire.fitnesses[60])
+    jax.debug.print("NORMALISED FITNESSES: {}", normalised_fitnesses[60])
+    normalised_hypervolume_function = partial(compute_hypervolume, reference_point=jnp.zeros(reference_point.shape))
+    normalised_hypervolumes = jax.vmap(normalised_hypervolume_function)(normalised_fitnesses)  # num centroids
+    normalised_hypervolumes = jnp.where(repertoire_not_empty, normalised_hypervolumes, -jnp.inf)
+    normalised_moqd_score = jnp.sum(repertoire_not_empty * normalised_hypervolumes)
+    normalised_max_hypervolume = jnp.max(normalised_hypervolumes)
+
+
     max_scores = jnp.max(repertoire.fitnesses, axis=(0, 1))
+    min_scores = jnp.min(repertoire.fitnesses, axis=(0, 1))
     max_sum_scores = jnp.max(jnp.sum(repertoire.fitnesses, axis=-1), axis=(0, 1))
-    
+
+    normalised_max_scores = jnp.max(normalised_fitnesses, axis=(0, 1))
+    normalised_max_sum_scores = jnp.max(jnp.sum(normalised_fitnesses, axis=-1), axis=(0, 1)) 
+
     (
         pareto_front,
         _,
@@ -145,9 +160,13 @@ def default_moqd_metrics(
     )
     metrics = {
         "hypervolumes": hypervolumes,
+        "normalised_hypervolumes": normalised_hypervolumes,
         "moqd_score": moqd_score,
+        "normalised_moqd_score": moqd_score,
         "max_hypervolume": max_hypervolume,
+        "normalised_max_hypervolume": normalised_max_hypervolume,
         "max_scores": max_scores,
+        "min_scores": min_scores,
         "max_sum_scores": max_sum_scores,
         "coverage": coverage,
         "num_solutions": num_solutions,

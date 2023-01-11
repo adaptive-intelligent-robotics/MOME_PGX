@@ -90,7 +90,7 @@ def main(config: ExperimentConfig) -> None:
     )
 
     reference_point = env_metrics["min_rewards"]
-    moqd_offset = env_metrics["max_rewards"]
+    max_rewards = env_metrics["max_rewards"]
 
     # Init a random key
     random_key = jax.random.PRNGKey(config.seed)
@@ -125,7 +125,8 @@ def main(config: ExperimentConfig) -> None:
     # Define a metrics function
     metrics_function = partial(
         default_moqd_metrics,
-        reference_point=jnp.array(reference_point)
+        reference_point=jnp.array(reference_point),
+        max_rewards=jnp.array(max_rewards)
     )
 
     # Prepare the scoring function

@@ -75,7 +75,7 @@ def main(config: ExperimentConfig) -> None:
     )
 
     reference_point = env_metrics["min_rewards"]
-    moqd_offset = env_metrics["max_rewards"]
+    max_rewards = env_metrics["max_rewards"]
 
     # Init a random key
     random_key = jax.random.PRNGKey(config.seed)
