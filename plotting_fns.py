@@ -103,7 +103,7 @@ class Plotter:
         # add map elites plot on last axes
         fig, axes = plot_2d_map_elites_repertoire(
             centroids=centroids,
-            repertoire_fitnesses=metrics["normalised_repertoire"][-1],
+            repertoire_fitnesses=metrics["normalised_hypervolumes"][-1],
             minval=self.minval,
             maxval=self.maxval,
             vmin=0,
