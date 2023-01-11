@@ -11,7 +11,7 @@ def get_env_metrics(env_name,
     if env_name == "walker2d_multi":
 
         # Empirically inferred min and max rewards for episode_length = 1000
-        env_metrics["min_rewards"] = [0, -15]
+        env_metrics["min_rewards"] = [-200, -15]
         env_metrics["max_rewards"] = [2000, 0]
 
     elif env_name == "ant_multi":
