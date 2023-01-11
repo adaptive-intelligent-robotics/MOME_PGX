@@ -86,6 +86,33 @@ class Plotter:
 
         plt.savefig(os.path.join(save_dir, f"repertoire_{save_name}"))
         plt.close()
+    
+
+    def plot_normalised_repertoire(
+        self,
+        centroids: Centroid,
+        metrics: Dict,
+        save_dir: str="./",
+        save_name: str="",
+    ) -> None:
+
+        # Plot normalised repertoire
+        fig = plt.figure()
+        axes = fig.add_subplot(111) 
+
+        # add map elites plot on last axes
+        fig, axes = plot_2d_map_elites_repertoire(
+            centroids=centroids,
+            repertoire_fitnesses=metrics["normalised_repertoire"][-1],
+            minval=self.minval,
+            maxval=self.maxval,
+            vmin=0,
+            vmax=1,
+            ax=axes
+        )
+
+        plt.savefig(os.path.join(save_dir, f"normalised_repertoire_{save_name}"))
+        plt.close()
 
         
     def plot_scores_evolution(

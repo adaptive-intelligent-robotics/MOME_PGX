@@ -99,6 +99,7 @@ class RunMOME:
         # Name save directories
         _repertoire_plots_save_dir = os.path.join(output_dir, "checkpoints", "repertoires", "plots")
         _repertoire_num_sols_save_dir = os.path.join(output_dir, "checkpoints", "repertoires", "num_sols")
+        _normalised_repertoire_save_dir = os.path.join(output_dir, "checkpoints", "repertoires", "normalised_hypervolume")
         _metrics_dir = os.path.join(output_dir, "checkpoints")
         _final_metrics_dir = os.path.join(output_dir, "final", "metrics")
         _final_plots_dir = os.path.join(output_dir, "final", "plots")
@@ -107,6 +108,7 @@ class RunMOME:
         # Create save directories
         os.makedirs(_repertoire_plots_save_dir, exist_ok=True)
         os.makedirs(_repertoire_num_sols_save_dir, exist_ok=True)
+        os.makedirs(_normalised_repertoire_save_dir, exist_ok=True)
         os.makedirs(_metrics_dir, exist_ok=True)
         os.makedirs(_final_metrics_dir, exist_ok=True)
         os.makedirs(_final_plots_dir, exist_ok=True)
@@ -229,6 +231,13 @@ class RunMOME:
                         centroids,
                         metrics,
                         save_dir=_repertoire_num_sols_save_dir,
+                        save_name=f"{iteration}",
+                    )
+                    
+                    plotter.plot_normalised_repertoire(
+                        centroids,
+                        metrics,
+                        save_dir=_normalised_repertoire_save_dir,
                         save_name=f"{iteration}",
                     )
             
