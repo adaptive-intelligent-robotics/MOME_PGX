@@ -5,8 +5,10 @@ from functools import partial
 from typing import Any, Callable, Optional, Tuple
 
 import jax
+import jax.numpy as jnp
 
 from qdax.core.containers.mapelites_repertoire import MapElitesRepertoire
+from qdax.core.containers.mome_repertoire import MOMERepertoire
 from qdax.core.emitters.emitter import Emitter, EmitterState
 from qdax.types import (
     Centroid,
@@ -44,18 +46,21 @@ class MAPElites:
         ],
         emitter: Emitter,
         metrics_function: Callable[[MapElitesRepertoire], Metrics],
+        moqd_metrics_function: Callable[[MOMERepertoire], Metrics],
     ) -> None:
         self._scoring_function = scoring_function
         self._emitter = emitter
         self._metrics_function = metrics_function
+        self._moqd_metrics_function = moqd_metrics_function
 
-    @partial(jax.jit, static_argnames=("self",))
+    @partial(jax.jit, static_argnames=("self", "pareto_front_max_length"))
     def init(
         self,
         init_genotypes: Genotype,
         centroids: Centroid,
+        pareto_front_max_length: int,
         random_key: RNGKey,
-    ) -> Tuple[MapElitesRepertoire, Optional[EmitterState], RNGKey]:
+    ) -> Tuple[MapElitesRepertoire, Optional[MOMERepertoire], Optional[EmitterState], RNGKey]:
         """
         Initialize a Map-Elites repertoire with an initial population of genotypes.
         Requires the definition of centroids that can be computed with any method
@@ -76,12 +81,24 @@ class MAPElites:
             init_genotypes, random_key
         )
 
+        mono_objective_fitnesses = jnp.sum(fitnesses, axis=-1)
+
         # init the repertoire
         repertoire = MapElitesRepertoire.init(
             genotypes=init_genotypes,
-            fitnesses=fitnesses,
+            fitnesses=mono_objective_fitnesses,
             descriptors=descriptors,
             centroids=centroids,
+        )
+
+
+       # init the passive MOQD repertoire for comparison
+        moqd_passive_repertoire, container_addition_metrics = MOMERepertoire.init(
+                        genotypes=init_genotypes,
+                        fitnesses=fitnesses,
+                        descriptors=descriptors,
+                        centroids=centroids,
+                        pareto_front_max_length=pareto_front_max_length,
         )
 
         # get initial state of the emitter
@@ -94,20 +111,26 @@ class MAPElites:
             emitter_state=emitter_state,
             repertoire=repertoire,
             genotypes=init_genotypes,
-            fitnesses=fitnesses,
+            fitnesses=mono_objective_fitnesses,
             descriptors=descriptors,
             extra_scores=extra_scores,
         )
 
-        return repertoire, emitter_state, random_key
+        moqd_metrics = self._moqd_metrics_function(moqd_passive_repertoire)
+        moqd_metrics = self._emitter.update_added_counts(container_addition_metrics, moqd_metrics)
+
+        metrics  = {**moqd_metrics}
+
+        return repertoire, moqd_passive_repertoire, emitter_state, metrics, random_key
 
     @partial(jax.jit, static_argnames=("self",))
     def update(
         self,
         repertoire: MapElitesRepertoire,
+        moqd_passive_repertoire: Optional[MOMERepertoire],
         emitter_state: Optional[EmitterState],
         random_key: RNGKey,
-    ) -> Tuple[MapElitesRepertoire, Optional[EmitterState], Metrics, RNGKey]:
+    ) -> Tuple[MapElitesRepertoire, Optional[MOMERepertoire], Optional[EmitterState], Metrics, RNGKey]:
         """
         Performs one iteration of the MAP-Elites algorithm.
         1. A batch of genotypes is sampled in the repertoire and the genotypes
@@ -136,15 +159,24 @@ class MAPElites:
             genotypes, random_key
         )
 
+        mono_objective_fitnesses = jnp.sum(fitnesses, axis=-1)
+
         # add genotypes in the repertoire
-        repertoire, container_addition_metrics = repertoire.add(genotypes, descriptors, fitnesses)
+        repertoire = repertoire.add(genotypes, descriptors, mono_objective_fitnesses)
+        
+        # update the passive repertoire
+        moqd_passive_repertoire, container_addition_metrics = moqd_passive_repertoire.add(
+            genotypes,
+            descriptors,
+            fitnesses,
+        )
 
         # update emitter state after scoring is made
         emitter_state = self._emitter.state_update(
             emitter_state=emitter_state,
             repertoire=repertoire,
             genotypes=genotypes,
-            fitnesses=fitnesses,
+            fitnesses=mono_objective_fitnesses,
             descriptors=descriptors,
             extra_scores=extra_scores,
         )
@@ -152,15 +184,19 @@ class MAPElites:
         # update the metrics
         metrics = self._metrics_function(repertoire)
         metrics = self._emitter.update_added_counts(container_addition_metrics, metrics)
-        
-        return repertoire, emitter_state, metrics, random_key
+
+        moqd_metrics = self._moqd_metrics_function(moqd_passive_repertoire)
+        moqd_metrics = self._emitter.update_added_counts(container_addition_metrics, moqd_metrics)
+        metrics  = {**moqd_metrics,  **metrics}
+
+        return repertoire, moqd_passive_repertoire, emitter_state, metrics, random_key
 
     @partial(jax.jit, static_argnames=("self",))
     def scan_update(
         self,
-        carry: Tuple[MapElitesRepertoire, Optional[EmitterState], RNGKey],
+        carry: Tuple[MapElitesRepertoire, Optional[MOMERepertoire], Optional[EmitterState], RNGKey],
         unused: Any,
-    ) -> Tuple[Tuple[MapElitesRepertoire, Optional[EmitterState], RNGKey], Metrics]:
+    ) -> Tuple[Tuple[MapElitesRepertoire, Optional[MOMERepertoire],  Optional[EmitterState], RNGKey], Metrics]:
         """Rewrites the update function in a way that makes it compatible with the
         jax.lax.scan primitive.
 
@@ -172,11 +208,10 @@ class MAPElites:
         Returns:
             The updated repertoire and emitter state, with a new random key and metrics.
         """
-        repertoire, emitter_state, random_key = carry
-        (repertoire, emitter_state, metrics, random_key,) = self.update(
-            repertoire,
-            emitter_state,
-            random_key,
+        repertoire, moqd_passive_repertoire, emitter_state, random_key = carry
+
+        repertoire, moqd_passive_repertoire, emitter_state, metrics, random_key = self.update(
+            repertoire, moqd_passive_repertoire, emitter_state, random_key
         )
 
-        return (repertoire, emitter_state, random_key), metrics
+        return (repertoire, moqd_passive_repertoire, emitter_state, random_key), metrics

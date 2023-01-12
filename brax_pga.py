@@ -13,7 +13,8 @@ from qdax.core.neuroevolution.mdp_utils import scoring_function
 from qdax.core.neuroevolution.buffers.buffer import QDTransition
 from qdax.core.neuroevolution.networks.networks import MLP
 from qdax.core.emitters.mutation_operators import isoline_variation
-from qdax.utils.metrics import CSVLogger, default_qd_metrics
+from qdax.utils.metrics import CSVLogger, default_qd_metrics, default_moqd_metrics
+from brax_step_functions import play_mo_step_fn
 
 @dataclass
 class ExperimentConfig:
@@ -31,16 +32,16 @@ class ExperimentConfig:
     num_centroids: int
 
     # Brax parameters
-    num_param_dimensions: int
+    num_objective_functions: int
     num_descriptor_dimensions: int
     policy_hidden_layer_sizes: Tuple[int,...]
+    pareto_front_max_length: int
     minval: float 
     maxval: float
 
     # Emitter parameters
     iso_sigma: float
     line_sigma: float 
-    proportion_mutation_ga: float
 
     # Logging parameters
     metrics_log_period: int
@@ -51,7 +52,9 @@ class ExperimentConfig:
     num_save_visualisations: int
 
     # TD3 params
-    env_batch_size: int
+    num_objective_emitters: int
+    mutation_ga_batch_size: int
+    mutation_qpg_batch_size: int    
     replay_buffer_size: int
     critic_hidden_layer_size: Tuple[int,...]
     critic_learning_rate: float
@@ -60,7 +63,7 @@ class ExperimentConfig:
     noise_clip: float 
     policy_noise: float 
     discount: float 
-    reward_scaling: float
+    reward_scaling: Tuple[float,...]
     transitions_batch_size: int 
     soft_tau_update: float 
     num_critic_training_steps: int 
@@ -71,8 +74,7 @@ class ExperimentConfig:
 
 @hydra.main(config_path="configs/brax/", config_name="brax_pga")
 def main(config: ExperimentConfig) -> None:
-
-    num_iterations = config.num_evaluations // config.env_batch_size
+    batch_size = config.mutation_qpg_batch_size + config.mutation_ga_batch_size
 
     # Init environment
     env = environments.create(config.env_name, 
@@ -99,46 +101,22 @@ def main(config: ExperimentConfig) -> None:
 
     # Init population of controllers
     random_key, subkey = jax.random.split(random_key)
-    keys = jax.random.split(subkey, num=config.env_batch_size)
-    fake_batch = jnp.zeros(shape=(config.env_batch_size, env.observation_size))
+    keys = jax.random.split(subkey, num=batch_size)
+    fake_batch = jnp.zeros(shape=(batch_size, env.observation_size))
     init_genotypes = jax.vmap(policy_network.init)(keys, fake_batch)
 
     # Create the initial environment states (same initial state for each individual in env_batch)
     random_key, subkey = jax.random.split(random_key)
-    keys = jnp.repeat(jnp.expand_dims(subkey, axis=0), repeats=config.env_batch_size, axis=0)
+    keys = jnp.repeat(jnp.expand_dims(subkey, axis=0), repeats=batch_size, axis=0)
     reset_fn = jax.jit(jax.vmap(env.reset))
     init_states = reset_fn(keys)
 
     # TO DO: save init_state
-
-    # Define the function to play a step with the policy in the environment
-    def play_step_fn(
-        env_state,
-        policy_params,
-        random_key,
-    ):
-        """
-        Play an environment step and return the updated state and the transition.
-        """
-
-        actions = policy_network.apply(policy_params, env_state.obs)
-        
-        state_desc = env_state.info["state_descriptor"]
-        next_state = env.step(env_state, actions)
-        reward = jnp.expand_dims(jnp.array(next_state.reward), axis=-1)
-
-        transition = QDTransition(
-            obs=env_state.obs,
-            next_obs=next_state.obs,
-            rewards=reward,
-            dones=next_state.done,
-            actions=actions,
-            truncations=next_state.info["truncation"],
-            state_desc=state_desc,
-            next_state_desc=next_state.info["state_descriptor"],
-        )
-
-        return next_state, policy_params, random_key, transition
+    play_step_fn = partial(
+        play_mo_step_fn,
+        policy_network=policy_network,
+        env=env,
+    )  
 
     # Prepare the scoring function
     bd_extraction_fn = environments.behavior_descriptor_extractor[config.env_name]
@@ -153,6 +131,7 @@ def main(config: ExperimentConfig) -> None:
 
     # Get minimum reward value to make sure qd_score are positive
     reward_offset = environments.reward_offset[config.env_name]
+    reward_offset = jnp.sum(jnp.array(reward_offset))
 
     # Define a metrics function
     metrics_function = partial(
@@ -160,11 +139,18 @@ def main(config: ExperimentConfig) -> None:
         qd_offset=reward_offset * config.episode_length,
     )
 
+    moqd_metrics_function = partial(
+        default_moqd_metrics,
+        reference_point=jnp.array(reference_point),
+        max_rewards=jnp.array(max_rewards)
+    )
+
     # Define the PG-emitter config
     pga_emitter_config = PGAMEConfig(
-        env_batch_size=config.env_batch_size,
+        num_objective_functions=config.num_objective_functions,
+        mutation_ga_batch_size=config.mutation_ga_batch_size,
+        mutation_qpg_batch_size=config.mutation_qpg_batch_size,        
         batch_size=config.transitions_batch_size,
-        proportion_mutation_ga=config.proportion_mutation_ga,
         critic_hidden_layer_size=config.critic_hidden_layer_size,
         critic_learning_rate=config.critic_learning_rate,
         greedy_learning_rate=config.greedy_learning_rate,
@@ -178,6 +164,7 @@ def main(config: ExperimentConfig) -> None:
         num_critic_training_steps=config.num_critic_training_steps,
         num_pg_training_steps=config.num_pg_training_steps
     )
+
 
     # Get the emitter
     variation_function = partial(
@@ -194,7 +181,7 @@ def main(config: ExperimentConfig) -> None:
     )
 
     pga = RunPGA(
-        num_iterations=num_iterations, 
+        num_evaluations=config.num_evaluations,
         num_init_cvt_samples=config.num_init_cvt_samples,
         num_centroids=config.num_centroids,
         num_descriptor_dimensions=env.behavior_descriptor_length,
@@ -203,8 +190,10 @@ def main(config: ExperimentConfig) -> None:
         scoring_fn=brax_scoring_function,
         pg_emitter=pg_emitter,
         episode_length=config.episode_length,
-        env_batch_size=config.env_batch_size,
+        batch_size=batch_size,
         metrics_fn=metrics_function,
+        moqd_metrics_fn=moqd_metrics_function,
+        pareto_front_max_length=config.pareto_front_max_length,
         metrics_log_period=config.metrics_log_period,
         plot_repertoire_period=config.plot_repertoire_period,
         checkpoint_period=config.checkpoint_period,

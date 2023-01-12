@@ -19,7 +19,7 @@ from qdax.core.map_elites import MAPElites
 from qdax.core.mome import MOME, MOMERepertoire
 from qdax.core.neuroevolution.networks.networks import MLP
 from qdax.environments.base_wrappers import QDEnv
-from qdax.types import Fitness, Descriptor, RNGKey, Genotype, Centroid
+from qdax.types import Fitness, Descriptor, RNGKey, Genotype, Centroid, Metrics
 from qdax.utils.plotting import ( 
     plot_2d_map_elites_repertoire, 
     plot_map_elites_results,
@@ -43,8 +43,10 @@ class RunPGA:
                 scoring_fn: Callable,
                 pg_emitter: PGAMEEmitter,
                 episode_length: int,
-                env_batch_size: int,
-                metrics_fn: Callable,
+                batch_size: int,
+                metrics_fn: Callable[[MapElitesRepertoire], Metrics],
+                moqd_metrics_fn: Callable[[MOMERepertoire], Metrics],
+                pareto_front_max_length: int,
                 metrics_log_period: int,
                 plot_repertoire_period: int,
                 checkpoint_period: int,
@@ -62,8 +64,10 @@ class RunPGA:
         self.scoring_fn = scoring_fn
         self.pg_emitter = pg_emitter
         self.episode_length = episode_length
-        self.env_batch_size = env_batch_size
+        self.batch_size = batch_size
         self.metrics_fn = metrics_fn
+        self.moqd_metrics_fn = moqd_metrics_fn
+        self.pareto_front_max_length = pareto_front_max_length
         self.metrics_log_period = metrics_log_period
         self.plot_repertoire_period = plot_repertoire_period
         self.checkpoint_period = checkpoint_period
@@ -115,6 +119,7 @@ class RunPGA:
             scoring_function=self.scoring_fn,
             emitter=self.pg_emitter,
             metrics_function=self.metrics_fn,
+            moqd_metrics_function=self.moqd_metrics_fn,
         )
 
         # Compute the centroids
@@ -139,8 +144,11 @@ class RunPGA:
         algorithm_start_time = time.time()
 
         # Compute initial repertoire
-        repertoire, emitter_state, random_key = map_elites.init(
-            init_population, centroids, random_key
+        repertoire, mome_passive_repertoire, emitter_state, metrics, random_key = map_elites.init(
+            init_population, 
+            centroids, 
+            self.pareto_front_max_length, 
+            random_key
         )
 
         initial_repertoire_time = time.time() - algorithm_start_time
@@ -160,7 +168,7 @@ class RunPGA:
                 "hypervolumes": jnp.zeros((1, self.num_centroids)),
                 "moqd_score": jnp.array([0.0]), 
                 "max_hypervolume": jnp.array([0.0]), 
-                "max_scores": jnp.zeros((1, self.num_objective_functions)),
+                "max_scores": jnp.array([0.0]),
                 "max_sum_scores": jnp.array([0.0]), 
                 "coverage": jnp.array([0.0]), 
                 "number_solutions": jnp.array([0.0]), 
@@ -170,13 +178,13 @@ class RunPGA:
         
         # Run the algorithm
         for iteration in range(self.num_iterations):
-     
+            
             start_time = time.time()
 
             # 'Log period' number of QD itertions
-            (repertoire, emitter_state, random_key,), metrics = jax.lax.scan(
+            (repertoire, mome_passive_repertoire, emitter_state, random_key,), metrics = jax.lax.scan(
                 map_elites.scan_update,
-                (repertoire, emitter_state, random_key),
+                (repertoire, mome_passive_repertoire, emitter_state, random_key),
                 (),
                 length=1,
             )

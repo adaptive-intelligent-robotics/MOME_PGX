@@ -5,7 +5,7 @@ hydra:
 
 # Env config
 seed: 42
-env_name: walker2d_uni
+env_name: walker2d_multi
 fixed_init_state: True
 episode_length: 1000
 
@@ -15,9 +15,10 @@ num_init_cvt_samples: 50000
 num_centroids: 128 
 
 # Brax parameters 
-num_objective_functions: 1
+num_objective_functions: 2
 num_descriptor_dimensions: 2
 policy_hidden_layer_sizes: [64, 64] 
+pareto_front_max_length: 50
 
 # Min and max val of BDs
 minval: 0. 
@@ -26,7 +27,6 @@ maxval: 1.
 # Emitter parameters
 iso_sigma: 0.005 
 line_sigma: 0.05 
-proportion_mutation_ga: 0.5
 
 # Logging parameters
 metrics_log_period: 50
@@ -37,7 +37,8 @@ save_final_visualisations: True
 num_save_visualisations: 10
 
 # TD3 params
-env_batch_size: 100 
+mutation_ga_batch_size: 128
+mutation_qpg_batch_size: 128
 replay_buffer_size: 1000000 
 critic_hidden_layer_size: [256, 256] 
 critic_learning_rate: 0.0003
@@ -46,7 +47,7 @@ policy_learning_rate: 0.001
 noise_clip: 0.5 
 policy_noise: 0.2 
 discount: 0.99 
-reward_scaling: 1.0 
+reward_scaling: [1.0] 
 transitions_batch_size: 256 
 soft_tau_update: 0.005 
 num_critic_training_steps: 300 
