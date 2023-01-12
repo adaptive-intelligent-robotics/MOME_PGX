@@ -37,6 +37,8 @@ def play_step_fn(
         env_state,
         policy_params,
         random_key,
+        policy_network,
+        env,
     ):
         """
         Play an environment step and return the updated state and the transition.
