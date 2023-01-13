@@ -49,7 +49,7 @@ From: airl_lab/default/airl_env:qdax_f57720d0
     cd /project/
     # Running the scrpt
     echo
-    echo "Running python3 brax_mopga.py only_forward_emitter=True "$@" "
+    echo "Running python3 brax_mopga.py only_forward_emitter=True algo_name="mopga_only_forward" "$@" "
     echo
     python3 brax_mopga.py only_forward_emitter=True "$@"
 
@@ -57,7 +57,7 @@ From: airl_lab/default/airl_env:qdax_f57720d0
     cd /project/
     # Running the scrpt
     echo
-    echo "Running python3 brax_mopga.py only_energy_emitter=True "$@" "
+    echo "Running python3 brax_mopga.py only_energy_emitter=True algo_name="mopga_only_forward" "$@" "
     echo
     python3 brax_mopga.py only_energy_emitter=True "$@"
 

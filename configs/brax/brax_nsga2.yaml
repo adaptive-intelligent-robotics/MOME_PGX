@@ -1,10 +1,11 @@
 hydra:
     run:
-        dir: ./results/${env_name}/${hydra.job.name}/${now:%Y-%m-%d_%H%M%S}_${seed}
+        dir: ./results/${env_name}/${algo_name}/${now:%Y-%m-%d_%H%M%S}_${seed}
 
 # Env config
 seed: 42
 env_name: walker2d_multi
+algo_name: nsga2
 fixed_init_state: True
 episode_length: 1000
 
