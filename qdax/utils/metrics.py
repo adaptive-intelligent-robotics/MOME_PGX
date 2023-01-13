@@ -118,6 +118,7 @@ def default_moqd_metrics(
     """
     # Calculating coverage
     repertoire_empty = repertoire.fitnesses == -jnp.inf # num centroids x pareto-front length x num criteria
+    min_scores = jnp.min(~repertoire_empty * repertoire.fitnesses, axis=(0, 1))
     repertoire_empty = jnp.all(repertoire_empty, axis=-1) # num centroids x pareto-front length
     repertoire_not_empty = ~repertoire_empty # num centroids x pareto-front length
     num_solutions = jnp.sum(repertoire_not_empty, axis=-1)
@@ -142,7 +143,6 @@ def default_moqd_metrics(
 
 
     max_scores = jnp.max(repertoire.fitnesses, axis=(0, 1))
-    min_scores = jnp.min(repertoire.fitnesses, axis=(0, 1))
     max_sum_scores = jnp.max(jnp.sum(repertoire.fitnesses, axis=-1), axis=(0, 1))
 
     normalised_max_scores = jnp.max(normalised_fitnesses, axis=(0, 1))
