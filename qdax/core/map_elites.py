@@ -116,10 +116,12 @@ class MAPElites:
             extra_scores=extra_scores,
         )
 
+        metrics = self._metrics_function(repertoire)
+        metrics = self._emitter.update_added_counts(container_addition_metrics, metrics)
+
         moqd_metrics = self._moqd_metrics_function(moqd_passive_repertoire)
         moqd_metrics = self._emitter.update_added_counts(container_addition_metrics, moqd_metrics)
-
-        metrics  = {**moqd_metrics}
+        metrics  = {**moqd_metrics,  **metrics}
 
         return repertoire, moqd_passive_repertoire, emitter_state, metrics, random_key
 
