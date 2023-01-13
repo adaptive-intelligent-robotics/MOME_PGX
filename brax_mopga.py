@@ -9,7 +9,7 @@ from functools import partial
 from typing import Tuple
 from run_mome import RunMOME
 from qdax import environments
-from qdax.core.emitters.pga_me_emitter import PGAMEConfig, MOPGAMEEmitter
+from qdax.core.emitters.pga_me_emitter import PGAMEConfig, MOPGAEmitter
 from qdax.core.emitters.pga_ablation_emitter import AblationPGAMEEmitter
 from qdax.core.neuroevolution.mdp_utils import scoring_function
 from qdax.core.neuroevolution.networks.networks import MLP
@@ -191,7 +191,7 @@ def main(config: ExperimentConfig) -> None:
         )  
 
     else:
-        pg_emitter = MOPGAMEEmitter(
+        pg_emitter = MOPGAEmitter(
             config=mopga_emitter_config,
             policy_network=policy_network,
             env=env,
