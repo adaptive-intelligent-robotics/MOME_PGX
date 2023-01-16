@@ -55,7 +55,7 @@ class MOPGAEmitter(MultiEmitter):
 
         for objective_index in range(config.num_objective_functions):
 
-            qpg_config = QualityPGEmitter(
+            qpg_config = QualityPGConfig(
                 num_objective_functions=config.num_objective_functions,
                 objective_function_index=objective_index,
                 env_batch_size=qpg_batch_size,
