@@ -147,7 +147,18 @@ class RunPGA:
 
         # Start timing the algorithm
         init_time = time.time()
+
+        num_pga_centroids = self.num_centroids * self.pareto_front_max_length
         centroids, random_key = compute_cvt_centroids(
+            num_descriptors=self.num_descriptor_dimensions,
+            num_init_cvt_samples=self.num_init_cvt_samples,
+            num_centroids=num_pga_centroids,
+            minval=self.minval,
+            maxval=self.maxval,
+            random_key=random_key,
+        )
+
+        moqd_passive_centroids, random_key = compute_cvt_centroids(
             num_descriptors=self.num_descriptor_dimensions,
             num_init_cvt_samples=self.num_init_cvt_samples,
             num_centroids=self.num_centroids,
@@ -157,6 +168,7 @@ class RunPGA:
         )
 
         centroids_init_time = time.time() - init_time
+
         logger.warning(f"--- Duration for CVT centroids computation : {centroids_init_time:.2f}s ---")
 
         logger.warning("--- Algorithm initialisation ---")
@@ -167,6 +179,7 @@ class RunPGA:
         repertoire, mome_passive_repertoire, emitter_state, init_metrics, random_key = map_elites.init(
             init_population, 
             centroids, 
+            moqd_passive_centroids,
             self.pareto_front_max_length, 
             random_key
         )
