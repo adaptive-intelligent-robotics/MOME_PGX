@@ -112,7 +112,8 @@ def main(config: ExperimentConfig) -> None:
     # Define a metrics function
     moqd_metrics_function = partial(
         default_moqd_metrics,
-        reference_point=jnp.array(reference_point)
+        reference_point=jnp.array(reference_point),
+        max_rewards=jnp.array(max_rewards)
     )
 
     # Prepare the scoring function
