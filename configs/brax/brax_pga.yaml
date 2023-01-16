@@ -31,11 +31,11 @@ line_sigma: 0.05
 
 # Logging parameters
 metrics_log_period: 50
-plot_repertoire_period: 100
-checkpoint_period: 50
-save_checkpoint_visualisations: True
+plot_repertoire_period: 400
+checkpoint_period: 500
+save_checkpoint_visualisations: False
 save_final_visualisations: True
-num_save_visualisations: 10
+num_save_visualisations: 5
 
 # TD3 params
 mutation_ga_batch_size: 128
