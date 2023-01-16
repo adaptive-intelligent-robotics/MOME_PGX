@@ -478,3 +478,27 @@ class MOMERepertoire(MapElitesRepertoire):
         )
 
         return sampled_genotypes, random_key
+    
+    @jax.jit
+    def empty(self) -> MOMERepertoire:
+        """
+        Empty the grid from all existing individuals.
+
+        Returns:
+            An empty MapElitesRepertoire
+        """
+
+        new_fitnesses = jnp.full_like(self.fitnesses, -jnp.inf)
+        new_descriptors = jnp.zeros_like(self.descriptors)
+        new_genotypes = jax.tree_map(lambda x: jnp.zeros_like(x), self.genotypes)
+
+        return MOMERepertoire(
+            genotypes=new_genotypes,
+            fitnesses=new_fitnesses,
+            descriptors=new_descriptors,
+            centroids=self.centroids,
+        )
+
+        # create default values
+
+
