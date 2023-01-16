@@ -193,7 +193,9 @@ class RunPGA:
             "checkpoint-metrics-logs.csv",
             header=logger_header
         )
-        
+
+        pga_scan_fn = map_elites.scan_update
+ 
         # Run the algorithm
         for iteration in range(num_loops):
             
@@ -201,7 +203,7 @@ class RunPGA:
 
             # 'Log period' number of QD itertions
             (repertoire, mome_passive_repertoire, emitter_state, random_key,), metrics = jax.lax.scan(
-                map_elites.scan_update,
+                pga_scan_fn,
                 (repertoire, mome_passive_repertoire, emitter_state, random_key),
                 (),
                 length=self.metrics_log_period,

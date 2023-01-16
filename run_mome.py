@@ -184,7 +184,7 @@ class RunMOME:
         for k, v in metrics_history.items():
             metrics_history[k] = jnp.expand_dims(jnp.array(v), axis=0)
 
-        logger.warning(f"------ Iteration: 0 out of {self.num_iterations} ------")
+        logger.warning(f"------ Initial Repertoire Metrics ------")
         logger.warning(f"--- MOQD Score: {init_metrics['moqd_score']:.2f}")
         logger.warning(f"--- Coverage: {init_metrics['coverage']:.2f}%")
         logger.warning("--- Max Fitnesses:" +  str(init_metrics['max_scores']))
@@ -200,6 +200,7 @@ class RunMOME:
 
         logger.warning("--- Starting the algorithm main process ---")
        
+        mome_scan_fn = mome.scan_update
 
         # Run the algorithm
         for iteration in range(num_loops):
@@ -207,7 +208,7 @@ class RunMOME:
 
             # 'Log period' number of QD itertions
             (repertoire, emitter_state, random_key,), metrics = jax.lax.scan(
-                mome.scan_update,
+                mome_scan_fn,
                 (repertoire, emitter_state, random_key),
                 (),
                 length=self.metrics_log_period,

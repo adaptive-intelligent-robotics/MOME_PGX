@@ -204,13 +204,15 @@ class RunNSGA2:
 
         logger.warning("--- Starting the algorithm main process ---")
        
+        nsga2_scan_fn = nsga2.scan_update
+
         # Run the algorithm
         for iteration in range(num_loops):
             start_time = time.time()
 
             # 'Log period' number of QD itertions
             (repertoire, moqd_passive_repertoire, emitter_state, random_key,), metrics = jax.lax.scan(
-                nsga2.scan_update,
+                nsga2_scan_fn,
                 (repertoire, moqd_passive_repertoire, emitter_state, random_key),
                 (),
                 length=self.metrics_log_period,
