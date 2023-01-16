@@ -84,7 +84,8 @@ class NSGA2Repertoire(GARepertoire):
     def add(
         self, 
         batch_of_genotypes: Genotype, 
-        batch_of_fitnesses: Fitness
+        batch_of_fitnesses: Fitness,
+        batch_of_descriptors: Descriptor,
     ) -> NSGA2Repertoire:
         """Implements the repertoire addition rules.
 
@@ -118,6 +119,7 @@ class NSGA2Repertoire(GARepertoire):
         )
 
         candidate_fitnesses = jnp.concatenate((self.fitnesses, batch_of_fitnesses))
+        candidate_descriptors = jnp.concatenate((self.descriptors, batch_of_descriptors))
 
         first_leaf = jax.tree_util.tree_leaves(candidates)[0]
         num_candidates = first_leaf.shape[0]
@@ -244,8 +246,9 @@ class NSGA2Repertoire(GARepertoire):
         # keep only the survivors
         new_candidates = jax.tree_util.tree_map(lambda x: x[indices], candidates)
         new_scores = candidate_fitnesses[indices]
+        new_descriptors = candidate_descriptors[indices]
 
-        new_repertoire = self.replace(genotypes=new_candidates, fitnesses=new_scores)
+        new_repertoire = self.replace(genotypes=new_candidates, fitnesses=new_scores, descriptors=new_descriptors)
 
         #added_list = to_keep_index[original_population_size:]
         #removed_count = original_population_size - jnp.sum(to_keep_index[:original_population_size])

@@ -5,7 +5,7 @@ import jax
 import jax.numpy as jnp
 
 from qdax.core.containers.ga_repertoire import GARepertoire
-from qdax.types import Fitness, Genotype
+from qdax.types import Fitness, Genotype, Descriptor
 
 
 class SPEA2Repertoire(GARepertoire):
@@ -56,6 +56,7 @@ class SPEA2Repertoire(GARepertoire):
         self,
         batch_of_genotypes: Genotype,
         batch_of_fitnesses: Fitness,
+        batch_of_descriptors: Descriptor,
     ) -> SPEA2Repertoire:
         """Updates the population with the new solutions.
 
@@ -79,6 +80,7 @@ class SPEA2Repertoire(GARepertoire):
         )
 
         candidates_fitnesses = jnp.concatenate((self.fitnesses, batch_of_fitnesses))
+        candidate_descriptors = jnp.concatenate((self.descriptors, batch_of_descriptors))
 
         # compute strength score for all solutions
         strength_scores = self._compute_strength_scores(batch_of_fitnesses)
@@ -89,8 +91,12 @@ class SPEA2Repertoire(GARepertoire):
         # keep the survivors
         new_candidates = jax.tree_util.tree_map(lambda x: x[indices], candidates)
         new_fitnesses = candidates_fitnesses[indices]
+        new_descriptors = candidate_descriptors[indices]
 
-        new_repertoire = self.replace(genotypes=new_candidates, fitnesses=new_fitnesses)
+        new_repertoire = self.replace(
+            genotypes=new_candidates, 
+            fitnesses=new_fitnesses,
+            descriptors=new_descriptors)
 
         return new_repertoire  # type: ignore
 
@@ -101,6 +107,7 @@ class SPEA2Repertoire(GARepertoire):
         fitnesses: Fitness,
         population_size: int,
         num_neighbours: int,
+        descriptors: Descriptor,
     ) -> GARepertoire:
         """Initializes the repertoire.
 
@@ -125,13 +132,16 @@ class SPEA2Repertoire(GARepertoire):
             lambda x: jnp.zeros(shape=(population_size,) + x.shape[1:]), genotypes
         )
 
+        default_descriptors = jnp.zeros(shape=(population_size, descriptors.shape[-1]))
+
         # create an initial repertoire with those default values
         repertoire = cls(
             genotypes=default_genotypes,
             fitnesses=default_fitnesses,
             num_neighbours=num_neighbours,
+            descriptors=default_descriptors
         )
 
-        new_repertoire = repertoire.add(genotypes, fitnesses)
+        new_repertoire = repertoire.add(genotypes, fitnesses, descriptors)
 
         return new_repertoire  # type: ignore

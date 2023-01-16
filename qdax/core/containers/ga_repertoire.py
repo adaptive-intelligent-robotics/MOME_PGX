@@ -10,7 +10,7 @@ import jax.numpy as jnp
 from jax.flatten_util import ravel_pytree
 
 from qdax.core.containers.repertoire import Repertoire
-from qdax.types import Fitness, Genotype, RNGKey
+from qdax.types import Fitness, Genotype, RNGKey, Descriptor
 
 
 class GARepertoire(Repertoire):
@@ -30,6 +30,7 @@ class GARepertoire(Repertoire):
 
     genotypes: Genotype
     fitnesses: Fitness
+    descriptors: Descriptor
 
     @property
     def size(self) -> int:
@@ -106,7 +107,7 @@ class GARepertoire(Repertoire):
 
     @jax.jit
     def add(
-        self, batch_of_genotypes: Genotype, batch_of_fitnesses: Fitness
+        self, batch_of_genotypes: Genotype, batch_of_fitnesses: Fitness, batch_of_descriptors: Descriptor,
     ) -> GARepertoire:
         """Implements the repertoire addition rules.
 
@@ -131,6 +132,9 @@ class GARepertoire(Repertoire):
             (self.fitnesses, batch_of_fitnesses), axis=0
         )
 
+        candidate_descriptors = jnp.concatenate(
+            (self.descriptors, batch_of_descriptors), axis=0
+        )
         # sort by fitnesses
         indices = jnp.argsort(jnp.sum(candidates_fitnesses, axis=1))[::-1]
 
@@ -143,7 +147,9 @@ class GARepertoire(Repertoire):
         )
 
         new_repertoire = self.replace(
-            genotypes=new_candidates, fitnesses=candidates_fitnesses[survivor_indices]
+            genotypes=new_candidates, 
+            fitnesses=candidates_fitnesses[survivor_indices], 
+            descriptors=candidate_descriptors[survivor_indices]
         )
 
         return new_repertoire  # type: ignore
@@ -153,6 +159,7 @@ class GARepertoire(Repertoire):
         cls,
         genotypes: Genotype,
         fitnesses: Fitness,
+        descriptors: Descriptor,
         population_size: int,
     ) -> GARepertoire:
         """Initializes the repertoire.
@@ -178,9 +185,15 @@ class GARepertoire(Repertoire):
             lambda x: jnp.zeros(shape=(population_size,) + x.shape[1:]), genotypes
         )
 
-        # create an initial repertoire with those default values
-        repertoire = cls(genotypes=default_genotypes, fitnesses=default_fitnesses)
+        default_descriptors = jnp.zeros(shape=(population_size, descriptors.shape[-1]))
 
-        new_repertoire = repertoire.add(genotypes, fitnesses)
+        # create an initial repertoire with those default values
+        repertoire = cls(
+            genotypes=default_genotypes, 
+            fitnesses=default_fitnesses,
+            descriptors=default_descriptors
+        )
+
+        new_repertoire = repertoire.add(genotypes, fitnesses, descriptors)
 
         return new_repertoire  # type: ignore
