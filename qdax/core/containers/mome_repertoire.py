@@ -7,11 +7,11 @@ from __future__ import annotations
 from functools import partial
 from typing import Any, Tuple, List
 
+import flax
 import jax
 import jax.numpy as jnp
 
 from qdax.core.containers.mapelites_repertoire import (
-    MapElitesRepertoire,
     get_cells_indices,
 )
 from qdax.types import (
@@ -26,7 +26,7 @@ from qdax.types import (
 from qdax.utils.pareto_front import compute_masked_pareto_front
 
 
-class MOMERepertoire(MapElitesRepertoire):
+class MOMERepertoire(flax.struct.PyTreeNode):
     """Class for the repertoire in Multi Objective Map Elites
 
     This class inherits from MAPElitesRepertoire. The stored data
@@ -44,6 +44,61 @@ class MOMERepertoire(MapElitesRepertoire):
 
     Inherited functions: save and load.
     """
+    genotypes: Genotype
+    fitnesses: Fitness
+    descriptors: Descriptor
+    centroids: Centroid
+
+    def save(self, path: str = "./") -> None:
+        """Saves the repertoire on disk in the form of .npy files.
+
+        Flattens the genotypes to store it with .npy format. Supposes that
+        a user will have access to the reconstruction function when loading
+        the genotypes.
+
+        Args:
+            path: Path where the data will be saved. Defaults to "./".
+        """
+
+        def flatten_genotype(genotype: Genotype) -> jnp.ndarray:
+            flatten_genotype, _ = ravel_pytree(genotype)
+            return flatten_genotype
+
+        # flatten all the genotypes
+        flat_genotypes = jax.vmap(flatten_genotype)(self.genotypes)
+
+        # save data
+        jnp.save(path + "genotypes.npy", flat_genotypes)
+        jnp.save(path + "fitnesses.npy", self.fitnesses)
+        jnp.save(path + "descriptors.npy", self.descriptors)
+        jnp.save(path + "centroids.npy", self.centroids)
+
+    @classmethod
+    def load(cls, reconstruction_fn: Callable, path: str = "./") -> MapElitesRepertoire:
+        """Loads a MAP Elites Repertoire.
+
+        Args:
+            reconstruction_fn: Function to reconstruct a PyTree
+                from a flat array.
+            path: Path where the data is saved. Defaults to "./".
+
+        Returns:
+            A MAP Elites Repertoire.
+        """
+
+        flat_genotypes = jnp.load(path + "genotypes.npy")
+        genotypes = jax.vmap(reconstruction_fn)(flat_genotypes)
+
+        fitnesses = jnp.load(path + "fitnesses.npy")
+        descriptors = jnp.load(path + "descriptors.npy")
+        centroids = jnp.load(path + "centroids.npy")
+
+        return cls(
+            genotypes=genotypes,
+            fitnesses=fitnesses,
+            descriptors=descriptors,
+            centroids=centroids,
+        )
 
     @property
     def repertoire_capacity(self) -> int:

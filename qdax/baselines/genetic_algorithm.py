@@ -146,10 +146,11 @@ class GeneticAlgorithm:
         repertoire = repertoire.add(genotypes, fitnesses)
 
         # update the passive repertoire
+        moqd_passive_repertoire = moqd_passive_repertoire.empty()
         moqd_passive_repertoire, container_addition_metrics = moqd_passive_repertoire.add(
-            genotypes,
-            descriptors,
-            fitnesses,
+            repertoire.genotypes,
+            repertoire.descriptors,
+            repertoire.fitnesses,
         )
 
         # update emitter state after scoring is made

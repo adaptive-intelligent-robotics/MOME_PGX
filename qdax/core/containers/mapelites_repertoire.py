@@ -151,6 +151,7 @@ class MapElitesRepertoire(flax.struct.PyTreeNode):
     fitnesses: Fitness
     descriptors: Descriptor
     centroids: Centroid
+    mo_fitnesses: Fitness
 
     def save(self, path: str = "./") -> None:
         """Saves the repertoire on disk in the form of .npy files.
@@ -233,6 +234,7 @@ class MapElitesRepertoire(flax.struct.PyTreeNode):
         batch_of_genotypes: Genotype,
         batch_of_descriptors: Descriptor,
         batch_of_fitnesses: Fitness,
+        batch_of_mo_fitnesses: Fitness,
     ) -> MapElitesRepertoire:
         """
         Add a batch of elements to the repertoire.
@@ -298,12 +300,18 @@ class MapElitesRepertoire(flax.struct.PyTreeNode):
         new_descriptors = self.descriptors.at[batch_of_indices.squeeze(axis=-1)].set(
             batch_of_descriptors
         )
+    
+        new_mo_fitnesses = self.mo_fitnesses.at[batch_of_indices.squeeze(axis=-1)].set(
+            batch_of_mo_fitnesses
+        )
+
 
         return MapElitesRepertoire(
             genotypes=new_repertoire_genotypes,
             fitnesses=new_fitnesses,
             descriptors=new_descriptors,
             centroids=self.centroids,
+            mo_fitnesses=new_mo_fitnesses
         )
 
     @classmethod
@@ -313,6 +321,7 @@ class MapElitesRepertoire(flax.struct.PyTreeNode):
         fitnesses: Fitness,
         descriptors: Descriptor,
         centroids: Centroid,
+        mo_fitnesses: Fitness,
     ) -> MapElitesRepertoire:
         """
         Initialize a Map-Elites repertoire with an initial population of genotypes.
@@ -342,15 +351,17 @@ class MapElitesRepertoire(flax.struct.PyTreeNode):
             genotypes,
         )
         default_descriptors = jnp.zeros(shape=(num_centroids, centroids.shape[-1]))
+        default_mo_fitnesses = -jnp.inf * jnp.ones(shape=(num_centroids, mo_fitnesses.shape[-1]))
 
         repertoire = cls(
             genotypes=default_genotypes,
             fitnesses=default_fitnesses,
             descriptors=default_descriptors,
             centroids=centroids,
+            mo_fitnesses=default_mo_fitnesses,
         )
 
         # Add initial values to the repertoire
-        new_repertoire = repertoire.add(genotypes, descriptors, fitnesses)
+        new_repertoire = repertoire.add(genotypes, descriptors, fitnesses, mo_fitnesses)
 
         return new_repertoire  # type: ignore

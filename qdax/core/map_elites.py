@@ -58,6 +58,7 @@ class MAPElites:
         self,
         init_genotypes: Genotype,
         centroids: Centroid,
+        moqd_passive_centroids: Centroid,
         pareto_front_max_length: int,
         random_key: RNGKey,
     ) -> Tuple[MapElitesRepertoire, Optional[MOMERepertoire], Optional[EmitterState], RNGKey]:
@@ -89,15 +90,16 @@ class MAPElites:
             fitnesses=mono_objective_fitnesses,
             descriptors=descriptors,
             centroids=centroids,
+            mo_fitnesses = fitnesses,
         )
 
 
-       # init the passive MOQD repertoire for comparison
+        # then readd the passive archive
         moqd_passive_repertoire, container_addition_metrics = MOMERepertoire.init(
                         genotypes=init_genotypes,
                         fitnesses=fitnesses,
                         descriptors=descriptors,
-                        centroids=centroids,
+                        centroids=moqd_passive_centroids,
                         pareto_front_max_length=pareto_front_max_length,
         )
 
@@ -164,13 +166,14 @@ class MAPElites:
         mono_objective_fitnesses = jnp.sum(fitnesses, axis=-1)
 
         # add genotypes in the repertoire
-        repertoire = repertoire.add(genotypes, descriptors, mono_objective_fitnesses)
+        repertoire = repertoire.add(genotypes, descriptors, mono_objective_fitnesses, fitnesses)
         
-        # update the passive repertoire
+        # first empty the passive repertoire
+        moqd_passive_repertoire = moqd_passive_repertoire.empty()
         moqd_passive_repertoire, container_addition_metrics = moqd_passive_repertoire.add(
-            genotypes,
-            descriptors,
-            fitnesses,
+            repertoire.genotypes,
+            repertoire.descriptors,
+            repertoire.mo_fitnesses,
         )
 
         # update emitter state after scoring is made
