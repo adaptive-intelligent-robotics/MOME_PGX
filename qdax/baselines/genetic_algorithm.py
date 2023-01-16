@@ -143,7 +143,7 @@ class GeneticAlgorithm:
         )
 
         # update the repertoire
-        repertoire = repertoire.add(genotypes, fitnesses)
+        repertoire = repertoire.add(genotypes, fitnesses, descriptors)
 
         # update the passive repertoire
         moqd_passive_repertoire = moqd_passive_repertoire.empty()

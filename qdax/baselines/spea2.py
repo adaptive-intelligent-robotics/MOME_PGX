@@ -61,6 +61,7 @@ class SPEA2(GeneticAlgorithm):
             fitnesses=fitnesses,
             population_size=population_size,
             num_neighbours=num_neighbours,
+            descriptors=descriptors,
         )
 
        # init the passive MOQD repertoire for comparison

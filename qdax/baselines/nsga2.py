@@ -47,6 +47,7 @@ class NSGA2(GeneticAlgorithm):
             genotypes=init_genotypes,
             fitnesses=fitnesses,
             population_size=population_size,
+            descriptors=descriptors,
         )
 
         # init the passive MOQD repertoire for comparison
