@@ -13,7 +13,7 @@ episode_length: 1000
 # Initialisation parameters
 num_evaluations: 1024000
 num_init_cvt_samples: 50000 
-num_centroids: 128 
+num_centroids: 6400 
 
 # Brax parameters 
 num_objective_functions: 2
