@@ -18,6 +18,7 @@ from qdax.baselines.spea2 import SPEA2
 from qdax.core.neuroevolution.networks.networks import MLP
 from qdax.environments.base_wrappers import QDEnv
 from qdax.types import Fitness, Descriptor, RNGKey, ExtraScores, Genotype, Centroid
+from qdax.utils.metrics import CSVLogger
 
 
 class RunSPEA2:
@@ -95,6 +96,9 @@ class RunSPEA2:
             
         # Set up logging functions 
         self.num_iterations = self.num_evaluations // self.batch_size
+        assert(self.num_iterations%self.metrics_log_period == 0, 
+            "Make sure num_iterations % metrics_log_period == 0 to ensure correct number of evaluations")
+
         num_loops = int(self.num_iterations/self.metrics_log_period)
 
         logging.basicConfig(level=logging.DEBUG)
@@ -182,23 +186,30 @@ class RunSPEA2:
         total_algorithm_duration += initial_repertoire_time
         logger.warning("--- Initialised initial repertoire ---")
 
-        timings = {"initial_repertoire_time": initial_repertoire_time,
-                    "centroids_init_time": centroids_init_time,
-                    "runtime_logs": jnp.zeros([(num_loops)+1, 1]),
-                    "avg_iteration_time": 0.0,
-                    "avg_evalps": 0.0}
-
-
         # Store initial repertoire metrics and convert to jnp.arrays
         metrics_history = init_metrics.copy()
         for k, v in metrics_history.items():
             metrics_history[k] = jnp.expand_dims(jnp.array(v), axis=0)
-        
+
+        logger.warning(f"------ Initial Repertoire Metrics ------")
+        logger.warning(f"--- MOQD Score: {init_metrics['moqd_score']:.2f}")
+        logger.warning(f"--- Coverage: {init_metrics['coverage']:.2f}%")
+        logger.warning("--- Max Fitnesses:" +  str(init_metrics['max_scores']))
+
+
+        logger_header = [k for k,_ in metrics_history.items()]
+        logger_header.insert(0, "iteration")
+        logger_header.append("time")
+
+        csv_logger = CSVLogger(
+            "checkpoint-metrics-logs.csv",
+            header=logger_header
+        )        
 
         logger.warning("--- Starting the algorithm main process ---")
        
         # Run the algorithm
-        for iteration in range(self.num_iterations):
+        for iteration in range(num_loops):
             start_time = time.time()
 
             # 'Log period' number of QD itertions
@@ -206,26 +217,29 @@ class RunSPEA2:
                 spea2.scan_update,
                 (repertoire, moqd_passive_repertoire, emitter_state, random_key),
                 (),
-                length=1,
+                length=self.metrics_log_period,
             )
 
             timelapse = time.time() - start_time
             total_algorithm_duration += timelapse
 
+            # log metrics
             metrics_history = {key: jnp.concatenate((metrics_history[key], metrics[key]), axis=0) for key in metrics}
+            logged_metrics = {"iteration": (iteration + 1)*self.metrics_log_period,  "time": timelapse}
+            for key, value in metrics.items():
+                # take last value
+                logged_metrics[key] = value[-1]
+            
+            # Print metrics
+            logger.warning(f"------ Iteration {(iteration+1)*self.metrics_log_period} out of {self.num_iterations} ------")
+            logger.warning(f"--- MOQD Score: {metrics['moqd_score'][-1]:.2f}")
+            logger.warning(f"--- Coverage: {metrics['coverage'][-1]:.2f}%")
+            logger.warning("--- Max Fitnesses:" +  str(metrics['max_scores'][-1]))
 
-            timings["avg_iteration_time"] = (timings["avg_iteration_time"]*(iteration*self.metrics_log_period) + timelapse) / ((iteration+1)*self.metrics_log_period)
-            timings["avg_evalps"] = (timings["avg_evalps"]*(iteration*self.metrics_log_period) + ((self.batch_size*self.metrics_log_period)/timelapse)) / ((iteration+1)*self.metrics_log_period)
-            timings["runtime_logs"] = timings["runtime_logs"].at[iteration, 0].set(total_algorithm_duration)
-            if iteration % self.metrics_log_period == 0:
-                logger.warning(f"------ Iteration {iteration+1} out of {self.num_iterations} ------")
-
-                logger.warning(f"--- MOQD Score: {metrics['moqd_score'][-1]:.2f}")
-                logger.warning(f"--- Coverage: {metrics['coverage'][-1]:.2f}%")
-                logger.warning("--- Max Fitnesses:" +  str(metrics['max_scores'][-1]))
+            csv_logger.log(logged_metrics)
 
             # Save plot of repertoire every plot_repertoire_period iterations
-            if iteration % self.plot_repertoire_period == 0:
+            if (iteration+1)*self.metrics_log_period  % self.plot_repertoire_period == 0:
                 if self.num_descriptor_dimensions == 2:
 
                     plotter.plot_repertoire(
@@ -233,33 +247,21 @@ class RunSPEA2:
                         centroids,
                         metrics,
                         save_dir=_repertoire_plots_save_dir,
-                        save_name=f"{iteration}",
+                        save_name=f"{(iteration+1)*self.metrics_log_period}",
                     )
                     plotter.plot_num_solutions(
                         centroids,
                         metrics,
                         save_dir=_repertoire_num_sols_save_dir,
-                        save_name=f"{iteration}",
+                        save_name=f"{(iteration+1)*self.metrics_log_period}",
                     )        
                                 
                     plotter.plot_normalised_repertoire(
                         centroids,
                         metrics,
                         save_dir=_normalised_repertoire_save_dir,
-                        save_name=f"{iteration}",
+                        save_name=f"{(iteration+1)*self.metrics_log_period}",
                     )
-
-            # Save latest repertoire and metrics every 'checkpoint_period' iterations
-            if iteration % self.checkpoint_period == 0:
-                repertoire.save(path=_final_repertoire_dir)
-                moqd_passive_repertoire.save(path=_final_repertoire_dir)
-
-                metrics_history_df = pd.DataFrame.from_dict(metrics_history,orient='index').transpose()
-                metrics_history_df.to_csv(os.path.join(_metrics_dir, "metrics_history.csv"), index=False)
-
-                timings_df = pd.DataFrame.from_dict(timings,orient='index').transpose()
-                timings_df.to_csv(os.path.join(_metrics_dir, "timings.csv"), index=False)
-
 
                 if self.save_checkpoint_visualisations:
                     random_key, subkey = jax.random.split(random_key)
@@ -269,9 +271,16 @@ class RunSPEA2:
                         subkey,
                         moqd_passive_repertoire, 
                         self.num_save_visualisations,
-                        iteration,
+                        (iteration+1)*self.metrics_log_period,
                         save_dir=_visualisations_save_dir,
                     )
+
+            # Save latest repertoire and metrics every 'checkpoint_period' iterations
+            if (iteration+1)*self.metrics_log_period % self.checkpoint_period == 0:
+                repertoire.save(path=_final_repertoire_dir)
+                moqd_passive_repertoire.save(path=_final_repertoire_dir)
+                metrics_history_df = pd.DataFrame.from_dict(metrics_history,orient='index').transpose()
+                metrics_history_df.to_csv(os.path.join(_metrics_dir, "metrics_history.csv"), index=False)
 
         total_duration = time.time() - init_time
 
@@ -286,9 +295,6 @@ class RunSPEA2:
 
         metrics_history_df = pd.DataFrame.from_dict(metrics_history,orient='index').transpose()
         metrics_history_df.to_csv(os.path.join(_metrics_dir, "metrics_history.csv"), index=False)
-
-        timings_df = pd.DataFrame.from_dict(timings,orient='index').transpose()
-        timings_df.to_csv(os.path.join(_metrics_dir, "timings.csv"), index=False)
 
         metrics_df = pd.DataFrame.from_dict(metrics,orient='index').transpose()
         metrics_df.to_csv(os.path.join(_final_metrics_dir, "final_metrics.csv"), index=False)
@@ -324,6 +330,13 @@ class RunSPEA2:
                         metrics,
                         save_dir=_final_plots_dir,
                         save_name=f"final",
+            )
+
+            plotter.plot_normalised_repertoire(
+                centroids,
+                metrics,
+                save_dir=_final_plots_dir,
+                save_name=f"final",
             )
 
         plotter.plot_scores_evolution(
