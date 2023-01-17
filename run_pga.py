@@ -225,11 +225,6 @@ class RunPGA:
             timelapse = time.time() - start_time
             total_algorithm_duration += timelapse
 
-            metrics_history = {key: jnp.concatenate((metrics_history[key], metrics[key])) for key in metrics}
-
-            timelapse = time.time() - start_time
-            total_algorithm_duration += timelapse
-
             # log metrics
             metrics_history = {key: jnp.concatenate((metrics_history[key], metrics[key]), axis=0) for key in metrics}
             logged_metrics = {"iteration": (iteration + 1)*self.metrics_log_period,  "time": timelapse}
@@ -284,6 +279,7 @@ class RunPGA:
             # Save latest repertoire and metrics every 'checkpoint_period' iterations
             if iteration % self.checkpoint_period == 0:
                 repertoire.save(path=_final_repertoire_dir)
+                moqd_passive_repertoire.save(path=_final_repertoire_dir)
                 metrics_history_df = pd.DataFrame.from_dict(metrics_history,orient='index').transpose()
                 metrics_history_df.to_csv(os.path.join(_metrics_dir, "metrics_history.csv"), index=False)
 
