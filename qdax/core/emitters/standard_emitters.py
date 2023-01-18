@@ -75,6 +75,14 @@ class MixingEmitter(Emitter):
         return genotypes, random_key
 
     @property
+    def use_all_data(self) -> bool:
+        """Whether to use all data or not when used along other emitters.
+        QualityPGEmitter uses the transitions from the genotypes that were generated
+        by other emitters.
+        """
+        return True
+        
+    @property
     def batch_size(self) -> int:
         """
         Returns:
