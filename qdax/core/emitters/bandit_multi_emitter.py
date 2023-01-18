@@ -393,8 +393,8 @@ class BanditMultiEmitter(MultiEmitter):
     
         for emitter_index in range(self.num_emitters):
             # store total tried emissions for emitter
-            metrics[f'emitter_{emitter_index+1}_emitted_count:'] = emitter_counts[emitter_index]
+            metrics[f'emitter_{emitter_index+1}_emitted_count:'] = emitter_batch_sizes[emitter_index]
             # store total successful emissions for emitter
-            metrics[f'emitter_{emitter_index+1}_added_count:'] = emitter_batch_sizes[emitter_index]
+            metrics[f'emitter_{emitter_index+1}_added_count:'] = emitter_counts[emitter_index]
 
         return metrics
