@@ -33,7 +33,7 @@ total_batch_size: 256
 bandit_scaling_param: 1.
 
 # Logging parameters
-metrics_log_period: 5
+metrics_log_period: 50
 plot_repertoire_period: 400
 checkpoint_period: 500
 save_checkpoint_visualisations: False
