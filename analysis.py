@@ -51,8 +51,9 @@ def run_analysis(dirname: str,
         lq_metrics_list.append(lq_metrics)
         uq_metrics_list.append(uq_metrics)
 
+    print_min_max_rewards(metrics_list)
 
-     
+    """     
     plot_scores_evolution(median_metrics_list, 
                     lq_metrics_list,
                     uq_metrics_list,
@@ -150,12 +151,15 @@ def run_analysis(dirname: str,
                     _emitter_plots_dir
     )
 
-
+    """
 
     return
 
 
 def get_metrics(dirname: str, experiment_name: str) -> pd.DataFrame:
+
+    #dtype_dict = {"min_scores": np.float64}
+
     experiment_metrics_list = []
 
     for experiment_replication in os.scandir(os.path.join(dirname, experiment_name)):
@@ -166,6 +170,38 @@ def get_metrics(dirname: str, experiment_name: str) -> pd.DataFrame:
     experiment_metrics = experiment_metrics_concat.groupby(experiment_metrics_concat.index)
     return experiment_metrics
 
+
+def print_min_max_rewards(
+    experiment_metrics_list: List[pd.DataFrame]
+):
+
+    mins_1 = []
+    mins_2 = []
+    maxs_1 = []
+    maxs_2 = []
+
+    for exp_metrics in experiment_metrics_list:
+        # Sort each replication into columns
+        exp_min_metrics = exp_metrics.obj.groupby(level=0).agg(list)["min_scores"].apply(pd.Series)
+        exp_max_metrics = exp_metrics.obj.groupby(level=0).agg(list)["max_scores"].apply(pd.Series)
+
+        # find min and max of each score for each replication
+        for col in exp_min_metrics.columns:
+            exp_min_scores = pd.DataFrame(exp_min_metrics[col].apply(lambda x: np.fromstring(x.replace('[','').replace(']',''), sep=' ')).to_list(), columns=['score1', 'score2'])
+            exp_max_scores = pd.DataFrame(exp_max_metrics[col].apply(lambda x: np.fromstring(x.replace('[','').replace(']',''), sep=' ')).to_list(), columns=['score1', 'score2'])
+
+            min_score1 = exp_min_scores["score1"].min()
+            min_score2 = exp_min_scores["score2"].min()
+            max_score1 = exp_max_scores["score1"].max()
+            max_score2 = exp_max_scores["score2"].max()
+
+            mins_1.append(min_score1)
+            mins_2.append(min_score2)
+            maxs_1.append(max_score1)
+            maxs_2.append(max_score2)
+
+    print(f"MIN SCORES ACROSS ALL EXPERIMENTS: [{np.min(mins_1)}, {np.min(mins_2)}]",)
+    print(f"MAX SCORES ACROSS ALL EXPERIMENTS: [{np.max(maxs_1)}, {np.max(maxs_2)}]", )
 
 
 def plot_scores_evolution(
