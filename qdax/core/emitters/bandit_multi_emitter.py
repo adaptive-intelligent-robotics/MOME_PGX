@@ -65,15 +65,15 @@ class BanditMultiEmitter(MultiEmitter):
         emitter_average_rewards = jnp.zeros(shape=self.num_emitters)
         emitter_total_offspring = jnp.zeros(shape=self.num_emitters)
         
-        
+
+        # Start with each emitter having the same batch size
         emitter_batch_sizes =  jnp.array(jnp.ones(shape=self.num_emitters)*self.total_batch_size/self.num_emitters, dtype=int)
-        # make sure batch sizes add up
+
+        # make sure batch sizes add up to constant value
         final_batch_size = self.total_batch_size - jnp.sum(emitter_batch_sizes[:-1])
         emitter_batch_sizes = emitter_batch_sizes.at[-1].set(final_batch_size)
 
-        emitter_masks = self.get_emitter_masks(
-            emitter_batch_sizes
-        )
+        emitter_masks = self.get_emitter_masks(emitter_batch_sizes)
 
         bandit_state = BanditState(
             emitter_average_rewards = emitter_average_rewards,
@@ -92,6 +92,8 @@ class BanditMultiEmitter(MultiEmitter):
         self,
         emitter_batch_sizes
     )-> Tuple[Mask]:
+
+        # Create masks for each emitter that correspond to batch size of each
 
         batch_sizes = jnp.repeat(jnp.expand_dims(jnp.arange(1, self.total_batch_size+1), axis=0), self.num_emitters, axis=0)
         cumulative_batches = jnp.cumsum(emitter_batch_sizes)
@@ -129,41 +131,36 @@ class BanditMultiEmitter(MultiEmitter):
         random_key, subkey = jax.random.split(random_key)
         subkeys = jax.random.split(subkey, self.num_emitters)
 
-        # prepare subkeys for each offspring random choice
-        random_key, new_subkey = jax.random.split(random_key)
-        choice_subkeys = jax.random.split(new_subkey, self.num_emitters)
-
-        #jax.debug.print("BATCH SIZES: {}", emitter_state.emitter_batch_sizes)
-
         # emit from all emitters and gather offsprings
         all_offsprings = []
-        all_offspring_mask = []
 
-        for emitter, sub_emitter_state, subkey_emitter, emitter_mask, choice_subkey in zip(
+        for emitter, sub_emitter_state, subkey_emitter in zip(
             self.emitters,
             emitter_state.emitter_states,
             subkeys,
-            emitter_state.emitter_masks,
-            choice_subkeys
         ):
             genotype, _ = emitter.emit(repertoire, sub_emitter_state, subkey_emitter)
             batch_size = jax.tree_util.tree_leaves(genotype)[0].shape[0]
             assert batch_size == self.total_batch_size # All emitters should emit a total batch size
             
-
+            # Add too many solutions for each emitter (and select desired ones later)
             all_offsprings.append(genotype)
-            all_offspring_mask.extend(emitter_mask)
         
-        # concatenate offsprings together
+        # concatenate all emitted offsprings together
         concatenated_offspring = jax.tree_util.tree_map(
             lambda *x: jnp.concatenate(x, axis=0), *all_offsprings
         )
 
+        # put all emitter masks into one mask     
+        all_offspring_mask = jnp.hstack(emitter_state.emitter_masks)
+
+        # Find indices of all offspring that correspond to batch for each emitter
         offspring_indices = jnp.where(
             jnp.array(all_offspring_mask, dtype=bool), 
             size=self.total_batch_size
         )
 
+        # Select desired offspring from all offspring
         offspring = jax.tree_util.tree_map(
             lambda x: x.at[offspring_indices].get(),
             concatenated_offspring,
@@ -207,9 +204,10 @@ class BanditMultiEmitter(MultiEmitter):
             emitter_state.selection_timestep, 
         )
 
-        #jax.debug.print("OLD BATCH SIZES: {}", emitter_state.emitter_batch_sizes)
+        # Get new batch sizes for next iteration
         new_emitter_batch_sizes = self.update_batch_sizes_from_scores(emitter_bandit_scores)
 
+        # Get masks that correspond to new batch sizes
         new_emitter_masks = self.get_emitter_masks(new_emitter_batch_sizes)
     
         bandit_state = BanditState(
@@ -288,28 +286,23 @@ class BanditMultiEmitter(MultiEmitter):
         all_emitter_added_counts = emitter_masks * emitters_added_list
 
         # Find rewards of each emitter
+
         emitter_counts = jnp.sum(all_emitter_added_counts, axis=-1)
         emitters_rewards = emitter_counts/emitter_batch_sizes
-        
+
         # Update total offspring counts of each emitter
-        #jax.debug.print("OLD EMITTER OFFSPRING TOTAL COUNTS: {}", emitter_total_offspring)
         new_emitter_total_offspring  = emitter_total_offspring + emitter_batch_sizes
-        #jax.debug.print("NEW EMITTER OFFSPRING TOTAL COUNTS: {}", new_emitter_total_offspring)
         
         # Update average reward of emitter
-        #jax.debug.print("OLD EMITTER AVERAGE REWARDS: {}", emitter_average_rewards)
         new_emitter_average_rewards = self.update_emitter_average_rewards(emitters_rewards, 
                                             emitter_average_rewards, 
                                             selection_timestep)
-        #jax.debug.print("NEW EMITTER AVERAGE REWARDS: {}", new_emitter_average_rewards)
 
         # calculate uncertainty term of bandit score
         uncertainty_terms = self.calculate_uncertainty_term(new_emitter_total_offspring, selection_timestep)
-        #jax.debug.print("UNCERTAINTY TERMS: {}", uncertainty_terms)
 
         # Calculate emitter success scores
         emitter_bandit_scores = new_emitter_average_rewards + uncertainty_terms
-        #jax.debug.print("SUCCESS SCORES {}:", emitter_bandit_scores)
 
         return  new_emitter_total_offspring, new_emitter_average_rewards, jnp.array(emitter_bandit_scores)
 
@@ -322,15 +315,12 @@ class BanditMultiEmitter(MultiEmitter):
         selection_timestep: int,
     ) -> None:
 
-        #jax.debug.print("OLD AVERAGES: {}", emitter_average_rewards)
-        #jax.debug.print("TIME STEP: {}", selection_timestep)
-        #jax.debug.print("NEW REWARD: {}", new_emitter_rewards)
+        # update average rewards of
         new_emitter_average_rewards = []
         for emitter_index, new_emitter_reward in enumerate(new_emitter_rewards):
             new_average = (selection_timestep - 1)/selection_timestep * emitter_average_rewards[emitter_index] + new_emitter_reward/selection_timestep
             new_emitter_average_rewards.append(new_average)
                 
-        #jax.debug.print("NEW REWARDS: {}", new_emitter_average_rewards)
 
         return jnp.array(new_emitter_average_rewards)
 
@@ -358,8 +348,6 @@ class BanditMultiEmitter(MultiEmitter):
 
         # normalise bandit scores so that they add to 1
         normalised_bandit_scores = emitter_bandit_scores/jnp.sum(emitter_bandit_scores)
-        #jax.debug.print("BANDIT SCORES: {}", emitter_bandit_scores)
-        #jax.debug.print("NORMALISED_BANDIT SCORES: {}", normalised_bandit_scores)
 
         # calculate batch size based on bandit scores
         new_batch_sizes =  jnp.array(normalised_bandit_scores * self.total_batch_size, dtype=int)
@@ -367,8 +355,6 @@ class BanditMultiEmitter(MultiEmitter):
         # make sure batch sizes add up
         final_batch_size = self.total_batch_size - jnp.sum(new_batch_sizes[:-1])
         new_batch_sizes = new_batch_sizes.at[-1].set(final_batch_size)
-
-        #jax.debug.print("NEW BATCH SIZES: {}", new_batch_sizes)
 
         return jnp.array(new_batch_sizes)
 
