@@ -52,20 +52,95 @@ def run_analysis(dirname: str,
         uq_metrics_list.append(uq_metrics)
 
 
-
-    plot_max_scores_evolution(median_metrics_list, 
-                            lq_metrics_list,
-                            uq_metrics_list,
-                            experiment_labels, 
-                            _plots_dir
-    )
      
-    plot_hypervolumes(median_metrics_list, 
+    plot_scores_evolution(median_metrics_list, 
                     lq_metrics_list,
                     uq_metrics_list,
-                    experiment_labels, 
-                    _plots_dir
+                    metrics_label = "max_sum_scores",
+                    plot_ylabel = "Maximum Sum Scores",
+                    plot_title = "Maximum Sum of Scores evolution during training",
+                    experiment_labels = experiment_labels, 
+                    save_dir = _plots_dir,
+
+    ) 
+
+    plot_scores_evolution(median_metrics_list, 
+                    lq_metrics_list,
+                    uq_metrics_list,
+                    metrics_label = "max_hypervolume",
+                    plot_ylabel = "Maximum hypervolume",
+                    plot_title = "Maximum hypervolume evolution during training",
+                    experiment_labels = experiment_labels, 
+                    save_dir = _plots_dir,
+
+    ) 
+
+    plot_scores_evolution(median_metrics_list, 
+                    lq_metrics_list,
+                    uq_metrics_list,
+                    metrics_label = "normalised_max_hypervolume",
+                    plot_ylabel = "Maximum normalised hypervolume",
+                    plot_title = "Maximum normalised hypervolume evolution during training",
+                    experiment_labels = experiment_labels, 
+                    save_dir = _plots_dir,
+
+    ) 
+
+
+    plot_scores_evolution(median_metrics_list, 
+                    lq_metrics_list,
+                    uq_metrics_list,
+                    metrics_label = "moqd_score",
+                    plot_ylabel = "MOQD Score",
+                    plot_title = "MOQD Score evolution during training",
+                    experiment_labels = experiment_labels, 
+                    save_dir = _plots_dir,
+
     )   
+
+    plot_scores_evolution(median_metrics_list, 
+                    lq_metrics_list,
+                    uq_metrics_list,
+                    metrics_label = "normalised_moqd_score",
+                    plot_ylabel = "Normalised MOQD Score",
+                    plot_title = "Normalised MOQD Score evolution during training",
+                    experiment_labels = experiment_labels, 
+                    save_dir = _plots_dir,
+
+    )   
+
+    plot_scores_evolution(median_metrics_list, 
+                    lq_metrics_list,
+                    uq_metrics_list,
+                    metrics_label = "global_hypervolume",
+                    plot_ylabel = "Global Hypervolume",
+                    plot_title = "Global hypervolume evolution during training",
+                    experiment_labels = experiment_labels, 
+                    save_dir = _plots_dir,
+
+    )   
+
+    plot_scores_evolution(median_metrics_list, 
+                    lq_metrics_list,
+                    uq_metrics_list,
+                    metrics_label = "normalised_global_hypervolume",
+                    plot_ylabel = "Normalised Global Hypervolume",
+                    plot_title = "Normalised Global hypervolume evolution during training",
+                    experiment_labels = experiment_labels, 
+                    save_dir = _plots_dir,
+
+    )   
+
+
+    plot_scores_evolution(median_metrics_list, 
+                    lq_metrics_list,
+                    uq_metrics_list,
+                    metrics_label = "coverage",
+                    plot_ylabel = "Coverage",
+                    plot_title = "Repertoire Coverage evolution during training",
+                    experiment_labels = experiment_labels, 
+                    save_dir = _plots_dir
+    )
 
     plot_emitter_counts(metrics_list,
                     emitter_names,
@@ -75,12 +150,7 @@ def run_analysis(dirname: str,
                     _emitter_plots_dir
     )
 
-    plot_coverage_scores(median_metrics_list, 
-                    lq_metrics_list,
-                    uq_metrics_list,
-                    experiment_labels, 
-                    _plots_dir
-    )
+
 
     return
 
@@ -97,16 +167,20 @@ def get_metrics(dirname: str, experiment_name: str) -> pd.DataFrame:
     return experiment_metrics
 
 
-def plot_hypervolumes(median_metrics: List[pd.DataFrame],
+
+def plot_scores_evolution(
+    median_metrics: List[pd.DataFrame],
     lq_metrics: List[pd.DataFrame],
     uq_metrics: List[pd.DataFrame],
+    metrics_label: str,
+    plot_ylabel: str,
+    plot_title: str,
     experiment_labels: List[str],
     save_dir: str,
-) -> None:
-
-    num_iterations = 4000
-    episode_length = 1000
-    batch_size = 256
+    num_iterations: int=4000,
+    episode_length: int=1000,
+    batch_size: int=256,
+):
 
     # Visualize the training evolution and final repertoire
     x_range = np.arange(num_iterations + 1) * episode_length * batch_size
@@ -118,90 +192,25 @@ def plot_hypervolumes(median_metrics: List[pd.DataFrame],
         x_label = "Number of evaluations"
 
 
-    fig, ax = plt.subplots(figsize=(18, 6), ncols=2)
+    fig = plt.figure()
+    ax = fig.add_subplot(111)  
 
     for exp_num, exp_name in enumerate(experiment_labels):
-        ax[0].set_xlabel(x_label)
-        ax[0].set_ylabel("MOQD Score")
-        ax[0].set_title("MOQD Score evolution during training")
-        ax[0].set_aspect(0.95 / ax[0].get_data_ratio(), adjustable="box")
-        ax[0].plot(x_range, median_metrics[exp_num]["moqd_score"], label=exp_name)
-        ax[0].fill_between(x_range, 
-            lq_metrics[exp_num]["moqd_score"], 
-            uq_metrics[exp_num]["moqd_score"], 
+        ax.set_xlabel(x_label)
+        ax.set_ylabel(plot_ylabel)
+        ax.set_title(plot_title)
+        ax.plot(x_range, median_metrics[exp_num][metrics_label], label=exp_name)
+        ax.fill_between(x_range, 
+            lq_metrics[exp_num][metrics_label], 
+            uq_metrics[exp_num][metrics_label], 
             alpha=0.2)
-        ax[0].legend()
-
-
-        ax[1].set_xlabel(x_label)
-        ax[1].set_ylabel("Global hypervolume")
-        ax[1].set_title("Global hypervolume evolution during training")
-        ax[1].set_aspect(0.95 / ax[1].get_data_ratio(), adjustable="box")
-        ax[1].plot(x_range, median_metrics[exp_num]["global_hypervolume"], label=exp_name)
-        ax[1].fill_between(x_range, 
-            lq_metrics[exp_num]["global_hypervolume"], 
-            uq_metrics[exp_num]["global_hypervolume"], 
-            alpha=0.2)
-        ax[1].legend()
-
+        ax.legend()
 
     fig.tight_layout(pad=5.0)
 
-    plt.savefig(os.path.join(save_dir, f"hypervolume_scores_evolution"))
+    plt.savefig(os.path.join(save_dir, metrics_label))
     plt.close()
 
-
-def plot_max_scores_evolution(median_metrics: List[pd.DataFrame],
-    lq_metrics: List[pd.DataFrame],
-    uq_metrics: List[pd.DataFrame],
-    experiment_labels: List[str],
-    save_dir: str,
-) -> None:
-
-    num_iterations = 4000
-    episode_length = 1000
-    batch_size = 256
-
-    # Visualize the training evolution and final repertoire
-    x_range = np.arange(num_iterations + 1) * episode_length * batch_size
-
-    if episode_length != 1:
-        x_label = "Environment steps"
-
-    else:
-        x_label = "Number of evaluations"
-
-
-    fig, ax = plt.subplots(figsize=(18, 6), ncols=2)
-
-    for exp_num, exp_name in enumerate(experiment_labels):
-        ax[0].set_xlabel(x_label)
-        ax[0].set_ylabel("Maximum hypervolume")
-        ax[0].set_title("Maximum hypervolume evolution during training")
-        ax[0].set_aspect(0.95 / ax[0].get_data_ratio(), adjustable="box")
-        ax[0].plot(x_range, median_metrics[exp_num]["max_hypervolume"], label=exp_name)
-        ax[0].fill_between(x_range, 
-            lq_metrics[exp_num]["max_hypervolume"], 
-            uq_metrics[exp_num]["max_hypervolume"], 
-            alpha=0.2)
-        ax[0].legend()
-
-
-        ax[1].set_xlabel(x_label)
-        ax[1].set_ylabel("Max Sum Scores")
-        ax[1].set_title("Max Sum Score evolution during training")
-        ax[1].set_aspect(0.95 / ax[1].get_data_ratio(), adjustable="box")   
-        ax[1].plot(x_range, median_metrics[exp_num]["max_sum_scores"], label=exp_name)
-        ax[1].fill_between(x_range, 
-            lq_metrics[exp_num]["max_sum_scores"], 
-            uq_metrics[exp_num]["max_sum_scores"], 
-            alpha=0.2)
-        ax[1].legend()
-
-    fig.tight_layout(pad=5.0)
-
-    plt.savefig(os.path.join(save_dir, f"max_scores_evolution"))
-    plt.close()
 
 def moving_average(x, w):
     return np.convolve(x, np.ones(w), 'valid') / w    
@@ -253,140 +262,47 @@ def plot_emitter_counts(metrics_list: List[pd.DataFrame],
             plt.close()
 
 
-def plot_coverage_scores(median_metrics: List[pd.DataFrame],
-    lq_metrics: List[pd.DataFrame],
-    uq_metrics: List[pd.DataFrame],
-    experiment_labels: List[str],
-    save_dir: str,
-) -> None:
-
-    num_iterations = 4000
-    episode_length = 1000
-    batch_size = 256
-
-    # Visualize the training evolution and final repertoire
-    x_range = np.arange(num_iterations + 1) * episode_length * batch_size
-
-    if episode_length != 1:
-        x_label = "Environment steps"
-
-    else:
-        x_label = "Number of evaluations"
-
-
-    fig = plt.figure()
-    ax1 = fig.add_subplot(111)  
-
-    for exp_num, exp_name in enumerate(experiment_labels):
-        ax1.set_xlabel(x_label)
-        ax1.set_ylabel("Coverage")
-        ax1.set_title("Coverage evolution during training")
-        ax1.plot(x_range, median_metrics[exp_num]["coverage"], label=exp_name)
-        ax1.fill_between(x_range, 
-            lq_metrics[exp_num]["coverage"], 
-            uq_metrics[exp_num]["coverage"], 
-            alpha=0.2)
-        ax1.legend()
-
-    plt.title("Coverage Scores")
-    plt.savefig(os.path.join(save_dir, "coverage_scores"))
-    plt.close()
-
-"""
-def load_repertoire(dirname:str,
-    experiment_name: List[str],
-) -> List[MOMERepertoire]:
-
-    pareto_front_max_length = 50
-
-    repertoires = []
-
-    for experiment_replication in os.scandir(os.path.join(dirname, experiment_name)):
-        centroids = np.load(os.path.join(experiment_replication, "final/repertoire/centroids.npy"))
-        descriptors = np.load(os.path.join(experiment_replication, "final/repertoire/descriptors.npy"))
-        fitnesses = np.load(os.path.join(experiment_replication, "final/repertoire/fitnesses.npy"))
-        genotypes = np.load(os.path.join(experiment_replication, "final/repertoire/genotypes.npy"))
-
-        repertoire = MOMERepertoire.init(
-            genotypes,
-            fitnesses,
-            descriptors,
-            centroids,
-            pareto_front_max_length)
-
-        repertoires.append(repertoire)
-
-    return repertoires   
-
-def plot_repertoires(repertoires_list: List[MOMERepertoire],
-    metrics_list: List[pd.DataFrame],
-    save_dir: str,
-    experiment_names: List[str],
-) -> None:
-
-    minval = 0.
-    maxval = 1.
-
-    fig, axes = plt.subplots(figsize=(18, 6), nrows=len(experiment_names), ncols=3)
-
-
-    for exp_num, exp_name in enumerate(experiment_names):
-
-        for replication_num, repertoire in enumerate(repertoires_list[exp_num]):
-        
-            centroids = repertoire.centroids
-            metrics = metrics_list[exp_num][replication_num]
-
-            # plot pareto fronts
-            axes = plot_mome_pareto_fronts(
-                centroids,
-                repertoire,
-                minval=minval,
-                maxval=maxval,
-                color_style='spectral',
-                axes=axes[exp_num],
-                with_global=True
-            )
-
-            # add map elites plot on last axes
-            fig, axes = plot_2d_map_elites_repertoire(
-                centroids=centroids,
-                repertoire_fitnesses=metrics["hypervolumes"][-1],
-                minval=minval,
-                maxval=maxval,
-                ax=axes[exp_num][2]
-            )
-
-        plt.savefig(os.path.join(save_dir, f"repertoires_replication_{replication_num}"))
-        plt.close()
-
-
-def get_configs(output_path) -> List[Dict]:
-    experiment_configs_list = []
-
-    for experiment_replication in os.scandir(dirname):
-        with open(os.path.join(experiment_replication, ".hydra", "config.yaml")) as config_file:
-            configs = yaml.load(config_file, Loader=yaml.loader.SafeLoader)
-
-    return experiment_configs_list
-"""
-
 
 if __name__ == '__main__':
-    dirname = "results/ro_2023-01-05_093551_31c3158b10ec634f8babbaf1211654f34af4eae1/halfcheetah_multi/"
-    experiment_names = ["brax_mome", "brax_mopga_normal", "brax_mopga_only_forward", "brax_mopga_only_energy"]
-    experiment_labels = ["MOME", "MOPGA", "MOPGA (Only Forward Emitter)", "MOPGA (Only Energy Emitter)"]
+    dirname = "results/ro_2023-01-17_100023_530cdd5bddb018153e73c6405d695030762f5475/walker2d_multi/"
 
-    emitter_names = {"brax_mome": ["emitter_mutation_count:", "emitter_variation_count:"], 
-            "brax_mopga_normal": ["emitter_1_count:", "emitter_2_count:", "emitter_3_count:"],
-            "brax_mopga_only_forward": ["emitter_1_count:", "emitter_2_count:"],
-            "brax_mopga_only_energy": ["emitter_1_count:", "emitter_2_count:"]
+    experiment_names = [
+        "mome", 
+        "mopga", 
+        "mopga_only_forward", 
+        "mopga_only_energy",
+        "nsga2",
+        "spea2",
+        #"pga"]
+    ]
+
+    experiment_labels = [
+        "MOME", 
+        "MOPGA", 
+        "MOPGA (Only Forward Emitter)", 
+        "MOPGA (Only Energy Emitter)",
+        "NSGA-II",
+        "SPEA2",
+        #"PGA"]
+    ]
+
+
+    emitter_names = {"mome": ["emitter_mutation_count:", "emitter_variation_count:"], 
+            "mopga": ["emitter_1_count:", "emitter_2_count:", "emitter_3_count:"],
+            "mopga_only_forward": ["emitter_1_count:", "emitter_2_count:"],
+            "mopga_only_energy": ["emitter_1_count:", "emitter_2_count:"],
+            "nsga2": ["emitter_mutation_count:", "emitter_variation_count:"],
+            "spea2": ["emitter_mutation_count:", "emitter_variation_count:"],
+            #"pga": ["emitter_1_count", "emitter_2_count"],
     }
 
-    emitter_labels = {"brax_mome": ["Mutation Emitter", "Variation Emitter"], 
-                "brax_mopga_normal": ["Forward Reward Emitter", "Energy Cost Emitter", "GA Emitter"],
-                "brax_mopga_only_forward": ["Forward Reward Emitter", "GA Emitter"],
-                "brax_mopga_only_energy": ["Forward Reward Emitter",  "GA Emitter"],
+    emitter_labels = {"mome": ["Mutation Emitter", "Variation Emitter"], 
+                "mopga": ["Forward Reward Emitter", "Energy Cost Emitter", "GA Emitter"],
+                "mopga_only_forward": ["Forward Reward Emitter", "GA Emitter"],
+                "mopga_only_energy": ["Forward Reward Emitter",  "GA Emitter"],
+                "nsga2": ["Mutation Emitter", "Variation Emitter"],
+                "spea2": ["Mutation Emitter", "Variation Emitter"],
+                "pga": ["emitter_1_count", "emitter_2_count"],
     }
     
     run_analysis(dirname, 
