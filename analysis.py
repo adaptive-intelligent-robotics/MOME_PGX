@@ -53,7 +53,6 @@ def run_analysis(dirname: str,
 
     print_min_max_rewards(metrics_list)
 
-    """     
     plot_scores_evolution(median_metrics_list, 
                     lq_metrics_list,
                     uq_metrics_list,
@@ -151,7 +150,6 @@ def run_analysis(dirname: str,
                     _emitter_plots_dir
     )
 
-    """
 
     return
 
@@ -300,7 +298,7 @@ def plot_emitter_counts(metrics_list: List[pd.DataFrame],
 
 
 if __name__ == '__main__':
-    dirname = "results/ro_2023-01-17_100023_530cdd5bddb018153e73c6405d695030762f5475/walker2d_multi/"
+    dirname = "results/ro_2023-01-17_100023_530cdd5bddb018153e73c6405d695030762f5475/humanoid_multi/"
 
     experiment_names = [
         "mome", 
@@ -309,7 +307,7 @@ if __name__ == '__main__':
         "mopga_only_energy",
         "nsga2",
         "spea2",
-        #"pga"]
+        "pga"
     ]
 
     experiment_labels = [
@@ -319,9 +317,8 @@ if __name__ == '__main__':
         "MOPGA (Only Energy Emitter)",
         "NSGA-II",
         "SPEA2",
-        #"PGA"]
+        "PGA"
     ]
-
 
     emitter_names = {"mome": ["emitter_mutation_count:", "emitter_variation_count:"], 
             "mopga": ["emitter_1_count:", "emitter_2_count:", "emitter_3_count:"],
@@ -329,7 +326,7 @@ if __name__ == '__main__':
             "mopga_only_energy": ["emitter_1_count:", "emitter_2_count:"],
             "nsga2": ["emitter_mutation_count:", "emitter_variation_count:"],
             "spea2": ["emitter_mutation_count:", "emitter_variation_count:"],
-            #"pga": ["emitter_1_count", "emitter_2_count"],
+            "pga": ["emitter_1_count", "emitter_2_count"],
     }
 
     emitter_labels = {"mome": ["Mutation Emitter", "Variation Emitter"], 
