@@ -279,7 +279,7 @@ class RunPGA:
             # Save latest repertoire and metrics every 'checkpoint_period' iterations
             if iteration % self.checkpoint_period == 0:
                 repertoire.save(path=_final_repertoire_dir)
-                moqd_passive_repertoire.save(path=_final_repertoire_dir)
+                mome_passive_repertoire.save(path=_final_repertoire_dir)
                 metrics_history_df = pd.DataFrame.from_dict(metrics_history,orient='index').transpose()
                 metrics_history_df.to_csv(os.path.join(_metrics_dir, "metrics_history.csv"), index=False)
 
