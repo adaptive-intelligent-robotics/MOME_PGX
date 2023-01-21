@@ -322,7 +322,6 @@ class BanditMultiEmitter(MultiEmitter):
             new_average = (selection_timestep - 1)/selection_timestep * emitter_average_rewards[emitter_index] + new_emitter_reward/selection_timestep
             new_emitter_average_rewards.append(new_average)
                 
-
         return jnp.array(new_emitter_average_rewards)
 
 
@@ -334,7 +333,7 @@ class BanditMultiEmitter(MultiEmitter):
         emitter_batch_sizes,
     )-> Tuple[float, ...]:
         
-        uncertainty_terms = self.bandit_scaling_param * jnp.sqrt(jnp.log(emitter_total_offspring)/emitter_batch_sizes)
+        uncertainty_terms = self.bandit_scaling_param * jnp.sqrt(jnp.log(jnp.sum(emitter_total_offspring))/emitter_batch_sizes)
 
         return jnp.array(uncertainty_terms)
 
@@ -353,7 +352,7 @@ class BanditMultiEmitter(MultiEmitter):
         final_batch_size = self.total_batch_size - jnp.sum(new_batch_sizes[:-1])
         new_batch_sizes = new_batch_sizes.at[-1].set(final_batch_size)
 
-        return jnp.array(new_batch_sizes)
+        return jnp.array(new_batch_sizes, dtype=int)
 
     @partial(jax.jit, static_argnames=("self",))   
     def update_added_counts(
