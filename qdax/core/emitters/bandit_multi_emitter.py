@@ -295,7 +295,8 @@ class BanditMultiEmitter(MultiEmitter):
         
         # Update average reward of emitter
         new_emitter_average_rewards = self.update_emitter_average_rewards(emitters_rewards, 
-                                            emitter_average_rewards)
+                                            emitter_average_rewards,
+                                            selection_timestep)
 
         # calculate uncertainty term of bandit score
         uncertainty_terms = self.calculate_uncertainty_term(new_emitter_total_offspring, emitter_batch_sizes)
@@ -315,6 +316,7 @@ class BanditMultiEmitter(MultiEmitter):
     ) -> None:
 
         # update average rewards of
+    
         new_emitter_average_rewards = []
         for emitter_index, new_emitter_reward in enumerate(new_emitter_rewards):
             new_average = (selection_timestep - 1)/selection_timestep * emitter_average_rewards[emitter_index] + new_emitter_reward/selection_timestep
@@ -331,12 +333,8 @@ class BanditMultiEmitter(MultiEmitter):
         emitter_total_offspring,
         emitter_batch_sizes,
     )-> Tuple[float, ...]:
-
-        uncertainty_terms = []
         
-        for total_emitter_offspring in emitter_total_offspring:
-            score = self.bandit_scaling_param * jnp.sqrt((jnp.log(total_emitter_offspring)/emitter_batch_sizes))
-            uncertainty_terms.append(score)
+        uncertainty_terms = self.bandit_scaling_param * jnp.sqrt(jnp.log(emitter_total_offspring)/emitter_batch_sizes)
 
         return jnp.array(uncertainty_terms)
 
