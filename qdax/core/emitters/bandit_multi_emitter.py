@@ -333,7 +333,7 @@ class BanditMultiEmitter(MultiEmitter):
         emitter_batch_sizes,
     )-> Tuple[float, ...]:
         
-        uncertainty_terms = self.bandit_scaling_param * jnp.sqrt(jnp.log(jnp.sum(emitter_total_offspring))/emitter_batch_sizes)
+        uncertainty_terms = self.bandit_scaling_param * jnp.sqrt(jnp.log(jnp.sum(emitter_total_offspring))/emitter_total_offspring)
 
         return jnp.array(uncertainty_terms)
 
