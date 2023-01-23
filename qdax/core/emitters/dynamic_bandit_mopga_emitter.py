@@ -160,14 +160,14 @@ class DynamicBanditMultiEmitter(BanditMultiEmitter):
         added_counts_buffer: ScoresBuffer,
     ) -> jnp.array:
 
-        # Update total offspring counts of each emitter
-        new_emitter_total_offspring  = offspring_buffer.find_average_score()
+        # Find total offspring of all emitters
+        new_emitter_total_offspring  = offspring_buffer.find_total_score()
         
         # Update average reward of emitter
-        new_emitter_added_counts = added_counts_buffer.find_average_score()
+        emitter_rewards = added_counts_buffer.data / offspring_buffer.data
 
         # calculate new emitter average rewards 
-        new_emitter_average_rewards = new_emitter_added_counts / new_emitter_total_offspring 
+        new_emitter_average_rewards = jnp.nanmean(emitter_rewards, axis=0)
 
         # calculate uncertainty term of bandit score
         uncertainty_terms =  self.bandit_scaling_param * jnp.sqrt(jnp.log(jnp.sum(new_emitter_total_offspring))/new_emitter_total_offspring)
