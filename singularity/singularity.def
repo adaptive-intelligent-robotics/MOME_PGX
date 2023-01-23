@@ -109,5 +109,13 @@ From: airl_lab/default/airl_env:qdax_f57720d0
     echo
     python3 brax_bandit_mopga.py "$@"
 
+%apprun many_emitter_mopga
+    cd /project/
+    # Running the scrpt
+    echo
+    echo "Running python3 brax_bandit_mopga.py many_emitters=True "$@" "
+    echo
+    python3 brax_bandit_mopga.py many_emitters=True"$@"
+
 %help
     This is the development and running environment of QDax

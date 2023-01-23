@@ -13,7 +13,8 @@ from qdax.core.emitters.bandit_mopga_emitter import (
     BanditMOPGAConfig, 
     BanditMOPGAEmitter, 
     DynamicBanditMOPGAConfig, 
-    DynamicBanditMOPGAEmitter
+    DynamicBanditMOPGAEmitter,
+    DynamicBanditManyEmitters
 )
 from qdax.core.neuroevolution.mdp_utils import scoring_function
 from qdax.core.neuroevolution.networks.networks import MLP
@@ -53,6 +54,7 @@ class ExperimentConfig:
     bandit_scaling_param: float
     dynamic_window_size: int
     dynamic_emitter: bool
+    many_emitters: bool
 
     # Logging parameters
     metrics_log_period: int
@@ -162,6 +164,7 @@ def main(config: ExperimentConfig) -> None:
 
         print("USING DYNAMIC BANDIT MULTI EMITTER")
 
+
         mopga_emitter_config = DynamicBanditMOPGAConfig(
             num_objective_functions=config.num_objective_functions,
             total_batch_size=config.total_batch_size,
@@ -182,12 +185,22 @@ def main(config: ExperimentConfig) -> None:
             num_pg_training_steps=config.num_pg_training_steps
         )
 
-        bandit_mopga_emitter = DynamicBanditMOPGAEmitter(
-            config=mopga_emitter_config,
-            policy_network=policy_network,
-            env=env,
-            variation_fn=variation_function,
-        )
+        if config.many_emitters:
+            bandit_mopga_emitter = DynamicBanditManyEmitters(
+                config=mopga_emitter_config,
+                policy_network=policy_network,
+                env=env,
+                variation_fn=variation_function,
+            )
+
+        else: 
+
+            bandit_mopga_emitter = DynamicBanditMOPGAEmitter(
+                config=mopga_emitter_config,
+                policy_network=policy_network,
+                env=env,
+                variation_fn=variation_function,
+            )
 
     
     else:

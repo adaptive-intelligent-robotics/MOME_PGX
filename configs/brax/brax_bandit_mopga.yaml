@@ -33,6 +33,7 @@ total_batch_size: 256
 bandit_scaling_param: 1.
 dynamic_window_size: 50
 dynamic_emitter: True
+many_emitters: False
 
 # Logging parameters
 metrics_log_period: 50
