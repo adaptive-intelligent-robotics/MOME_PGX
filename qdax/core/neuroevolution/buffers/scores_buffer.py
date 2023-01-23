@@ -83,3 +83,10 @@ class ScoresBuffer(flax.struct.PyTreeNode):
         average = jnp.nanmean(self.data, axis=0)
 
         return average
+    
+    def find_total_score(self,
+        )-> jnp.array:
+
+        total = jnp.nansum(self.data, axis=0)
+
+        return total
