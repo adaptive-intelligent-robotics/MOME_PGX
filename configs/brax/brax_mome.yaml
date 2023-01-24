@@ -12,6 +12,7 @@ episode_length: 1000
 # MOME parameters
 pareto_front_max_length: 50
 num_objective_functions: 2
+bias_sampling: False
 
 # Initialisation parameters
 batch_size: 256

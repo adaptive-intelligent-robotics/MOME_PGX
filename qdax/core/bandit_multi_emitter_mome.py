@@ -8,6 +8,7 @@ import jax.numpy as jnp
 
 from qdax.core.containers.mome_repertoire import MOMERepertoire
 from qdax.core.mome import MOME
+from qdax.core.containers.biased_sampling_mome_repertoire import BiasedSamplingMOMERepertoire
 from qdax.core.emitters.emitter import EmitterState
 from qdax.types import Centroid, RNGKey
 
@@ -50,14 +51,24 @@ class BanditMultiEmitterMOME(MOME):
         )
 
         # init the repertoire
-        repertoire, container_addition_metrics = MOMERepertoire.init(
-            genotypes=init_genotypes,
-            fitnesses=fitnesses,
-            descriptors=descriptors,
-            centroids=centroids,
-            pareto_front_max_length=pareto_front_max_length,
-        )
+        if self._bias_sampling:
+            repertoire, container_addition_metrics = BiasedSamplingMOMERepertoire.init(
+                genotypes=init_genotypes,
+                fitnesses=fitnesses,
+                descriptors=descriptors,
+                centroids=centroids,
+                pareto_front_max_length=pareto_front_max_length,
+            )
 
+        else:
+            repertoire, container_addition_metrics = MOMERepertoire.init(
+                genotypes=init_genotypes,
+                fitnesses=fitnesses,
+                descriptors=descriptors,
+                centroids=centroids,
+                pareto_front_max_length=pareto_front_max_length,
+            )
+            
         # get initial state of the emitter
         emitter_state, random_key = self._emitter.init(
             init_genotypes=init_genotypes, random_key=random_key

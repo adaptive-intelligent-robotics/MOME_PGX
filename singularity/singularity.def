@@ -109,6 +109,30 @@ From: airl_lab/default/airl_env:qdax_f57720d0
     echo
     python3 brax_bandit_mopga.py "$@"
 
+%apprun biased_bandit_mopga
+    cd /project/
+    # Running the scrpt
+    echo
+    echo "Running python3 brax_bandit_mopga.py bias_sampling=True "$@" "
+    echo
+    python3 brax_bandit_mopga.py bias_sampling=True algo_name="biased_dynamic_bandit" "$@"
+
+%apprun biased_mopga
+    cd /project/
+    # Running the scrpt
+    echo
+    echo "Running python3 brax_mopga.py bias_sampling=True "$@" "
+    echo
+    python3 brax_bandit_mopga.py bias_sampling=True algo_name="biased_mopga" "$@"
+
+%apprun biased_mome
+    cd /project/
+    # Running the scrpt
+    echo
+    echo "Running python3 brax_mome.py bias_sampling=True "$@" "
+    echo
+    python3 brax_mome.py bias_sampling=True algo_name="biased_mome" "$@"
+
 %apprun many_emitter_mopga
     cd /project/
     # Running the scrpt

@@ -40,6 +40,7 @@ class RunMOME:
     def __init__(self,
                 pareto_front_max_length: int,
                 num_descriptor_dimensions: int,
+                bias_sampling: bool,
                 minval: int,
                 maxval: int,
                 num_evaluations: int, 
@@ -61,6 +62,7 @@ class RunMOME:
 
         self.pareto_front_max_length = pareto_front_max_length
         self.num_descriptor_dimensions = num_descriptor_dimensions
+        self.bias_sampling = bias_sampling
         self.minval = minval
         self.maxval = maxval
         self.num_evaluations =  num_evaluations
@@ -142,7 +144,10 @@ class RunMOME:
             scoring_function=self.scoring_fn,
             emitter=self.emitter,
             metrics_function=self.metrics_fn,
+            bias_sampling=self.bias_sampling,
+
         )
+        logger.warning(f"---- Bias Sampling: {self.bias_sampling} ----")
 
         # Compute the centroids
         logger.warning("--- Computing the CVT centroids ---")

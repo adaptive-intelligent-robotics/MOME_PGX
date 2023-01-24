@@ -12,6 +12,7 @@ episode_length: 1000
 # MOO parameters
 num_objective_functions: 2
 pareto_front_max_length: 50
+bias_sampling: False
 
 # Initialisation parameters
 num_evaluations: 1024000

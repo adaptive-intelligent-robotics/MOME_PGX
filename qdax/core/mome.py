@@ -7,6 +7,7 @@ import jax
 import jax.numpy as jnp
 
 from qdax.core.containers.mome_repertoire import MOMERepertoire
+from qdax.core.containers.biased_sampling_mome_repertoire import BiasedSamplingMOMERepertoire
 from qdax.core.emitters.emitter import EmitterState
 from qdax.types import Centroid, RNGKey
 
@@ -26,10 +27,12 @@ class MOME:
         ],
         emitter: Emitter,
         metrics_function: Callable[[MOMERepertoire], Metrics],
+        bias_sampling: bool=False,
     ) -> None:
         self._scoring_function = scoring_function
         self._emitter = emitter
         self._metrics_function = metrics_function
+        self._bias_sampling = bias_sampling
 
     @partial(jax.jit, static_argnames=("self", "pareto_front_max_length"))
     def init(
@@ -60,13 +63,23 @@ class MOME:
         )
 
         # init the repertoire
-        repertoire, container_addition_metrics = MOMERepertoire.init(
-            genotypes=init_genotypes,
-            fitnesses=fitnesses,
-            descriptors=descriptors,
-            centroids=centroids,
-            pareto_front_max_length=pareto_front_max_length,
-        )
+        if self._bias_sampling:
+            repertoire, container_addition_metrics = BiasedSamplingMOMERepertoire.init(
+                genotypes=init_genotypes,
+                fitnesses=fitnesses,
+                descriptors=descriptors,
+                centroids=centroids,
+                pareto_front_max_length=pareto_front_max_length,
+            )
+
+        else:
+            repertoire, container_addition_metrics = MOMERepertoire.init(
+                genotypes=init_genotypes,
+                fitnesses=fitnesses,
+                descriptors=descriptors,
+                centroids=centroids,
+                pareto_front_max_length=pareto_front_max_length,
+            )
 
         # get initial state of the emitter
         emitter_state, random_key = self._emitter.init(

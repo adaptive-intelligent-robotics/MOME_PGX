@@ -30,6 +30,7 @@ class ExperimentConfig:
     # MOO parameters
     num_objective_functions: int
     pareto_front_max_length: int
+    bias_sampling: bool
 
     # Initialisation parameters
     num_evaluations: int
@@ -201,6 +202,7 @@ def main(config: ExperimentConfig) -> None:
     mome = RunMOME(
         pareto_front_max_length=config.pareto_front_max_length,
         num_descriptor_dimensions=env.behavior_descriptor_length,
+        bias_sampling=config.bias_sampling,
         minval=config.minval,
         maxval=config.maxval,
         num_evaluations=config.num_evaluations, 
