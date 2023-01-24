@@ -9,17 +9,18 @@ from jax import numpy as jnp
 from qdax.core.containers.repertoire import Repertoire
 from qdax.core.emitters.emitter import Emitter, EmitterState
 from qdax.core.emitters.multi_emitter import MultiEmitter
+from qdax.core.neuroevolution.buffers.scores_buffer import ScoresBuffer
 from qdax.types import Descriptor, ExtraScores, Fitness, Genotype, Metrics, RNGKey, Mask
 
 
-class BanditState(EmitterState):
+class BanditMultiEmitterState(EmitterState):
     """contains state for bandit"""
-    emitter_average_rewards: Tuple[float, ...]
-    emitter_total_offspring: Tuple[int, ...]
+    emitter_added_counts_buffer: ScoresBuffer
+    emitter_batch_sizes_buffer: ScoresBuffer
     emitter_states: Tuple[EmitterState, ...]
     emitter_batch_sizes: jnp.ndarray
     emitter_masks: Tuple[Mask, ...]
-    selection_timestep: int
+
 
 class BanditMultiEmitter(MultiEmitter):
     """Emitter that mixes several emitters in parallel.
@@ -32,11 +33,14 @@ class BanditMultiEmitter(MultiEmitter):
         bandit_scaling_param: float,
         total_batch_size: int,
         num_emitters: int,
+        dynamic_window_size: int,
     ):
         self.emitters = emitters
         self.bandit_scaling_param = bandit_scaling_param
         self.total_batch_size = total_batch_size
         self.num_emitters = num_emitters
+        self.dynamic_window_size = dynamic_window_size
+
 
 
     def init(
@@ -62,9 +66,14 @@ class BanditMultiEmitter(MultiEmitter):
             emitter_states.append(emitter_state)
         
         # Init emitter bandit scores
-        emitter_average_rewards = jnp.zeros(shape=self.num_emitters)
-        emitter_total_offspring = jnp.zeros(shape=self.num_emitters)
-        
+        emitter_added_counts_buffer = ScoresBuffer.init(
+            buffer_size=self.dynamic_window_size,
+            num_emitters=self.num_emitters
+        )
+        emitter_batch_sizes_buffer = ScoresBuffer.init(
+            buffer_size=self.dynamic_window_size,
+            num_emitters=self.num_emitters
+        )
 
         # Start with each emitter having the same batch size
         emitter_batch_sizes =  jnp.array(jnp.ones(shape=self.num_emitters)*self.total_batch_size/self.num_emitters, dtype=int)
@@ -75,16 +84,98 @@ class BanditMultiEmitter(MultiEmitter):
 
         emitter_masks = self.get_emitter_masks(emitter_batch_sizes)
 
-        bandit_state = BanditState(
-            emitter_average_rewards = emitter_average_rewards,
-            emitter_total_offspring = emitter_total_offspring,
-            emitter_states = tuple(emitter_states),
+        bandit_state = BanditMultiEmitterState(
+            emitter_added_counts_buffer = emitter_added_counts_buffer,
+            emitter_batch_sizes_buffer= emitter_batch_sizes_buffer,
+            emitter_states = emitter_states,
             emitter_batch_sizes = emitter_batch_sizes,
             emitter_masks = emitter_masks,
-            selection_timestep = 1,
         )
         
         return bandit_state, random_key
+    
+
+    @partial(jax.jit, static_argnames=("self",))
+    def update(
+        self,
+        emitter_state: Optional[BanditMultiEmitterState],
+        repertoire: Optional[Repertoire] = None,
+        genotypes: Optional[Genotype] = None,
+        fitnesses: Optional[Fitness] = None,
+        descriptors: Optional[Descriptor] = None,
+        extra_scores: Optional[ExtraScores] = None,
+        emitters_added_list: Metrics = None,
+        selection_timestep: int = 1,
+    ) -> Optional[BanditMultiEmitterState]:
+
+
+        # First update each sub-emitter state
+        new_emitter_states = self.state_update(
+            emitter_state=emitter_state,
+            repertoire=repertoire,
+            genotypes=genotypes,
+            fitnesses=fitnesses,
+            descriptors=descriptors,
+            extra_scores=extra_scores,
+        )
+
+        # update emitter total offspring
+        new_batch_sizes_buffer = emitter_state.emitter_batch_sizes_buffer.insert(emitter_state.emitter_batch_sizes) 
+
+        # separate added counts into counts per emitter
+        all_emitter_added_counts = emitter_state.emitter_masks * emitters_added_list
+
+        # Find total added counts of each emitter
+        emitter_added_counts = jnp.array(jnp.sum(all_emitter_added_counts, axis=-1), dtype=int)
+
+        # update added counts buffer
+        new_emitter_added_counts_buffer = emitter_state.emitter_added_counts_buffer.insert(emitter_added_counts)
+
+        # calculate emitter_bandit_scores
+        emitter_bandit_scores = self.calculate_emitter_scores(new_batch_sizes_buffer,
+            new_emitter_added_counts_buffer
+        )
+
+        # Get new batch sizes for next iteration
+        new_emitter_batch_sizes = self.update_batch_sizes_from_scores(emitter_bandit_scores)
+
+        # Get masks that correspond to new batch sizes
+        new_emitter_masks = self.get_emitter_masks(new_emitter_batch_sizes)
+    
+        bandit_state = BanditMultiEmitterState(
+            emitter_added_counts_buffer = new_emitter_added_counts_buffer,
+            emitter_batch_sizes_buffer= new_batch_sizes_buffer,
+            emitter_states = new_emitter_states,
+            emitter_batch_sizes = new_emitter_batch_sizes,
+            emitter_masks = new_emitter_masks,
+        )
+
+        return bandit_state
+
+
+    @partial(jax.jit, static_argnames=("self",))     
+    def calculate_emitter_scores(
+        self,
+        offspring_buffer: ScoresBuffer,
+        added_counts_buffer: ScoresBuffer,
+    ) -> jnp.array:
+
+        # Find total offspring of all emitters
+        new_emitter_total_offspring  = offspring_buffer.find_total_score()
+        
+        # Update average reward of emitter
+        emitter_rewards = added_counts_buffer.data / offspring_buffer.data
+
+        # calculate new emitter average rewards 
+        new_emitter_average_rewards = jnp.nanmean(emitter_rewards, axis=0)
+
+        # calculate uncertainty term of bandit score
+        uncertainty_terms =  self.bandit_scaling_param * jnp.sqrt(jnp.log(jnp.sum(new_emitter_total_offspring))/new_emitter_total_offspring)
+
+        # Calculate emitter success scores
+        emitter_bandit_scores = new_emitter_average_rewards + uncertainty_terms
+
+        return  emitter_bandit_scores
 
     
     @partial(jax.jit, static_argnames=("self",))
@@ -112,7 +203,7 @@ class BanditMultiEmitter(MultiEmitter):
     def emit(
         self,
         repertoire: Optional[Repertoire],
-        emitter_state: Optional[BanditState],
+        emitter_state: Optional[BanditMultiEmitterState],
         random_key: RNGKey,
     ) -> Tuple[Genotype, RNGKey]:
         """Emit new population. Use all the sub emitters to emit subpopulation
@@ -170,61 +261,9 @@ class BanditMultiEmitter(MultiEmitter):
     
 
     @partial(jax.jit, static_argnames=("self",))
-    def update(
-        self,
-        emitter_state: Optional[BanditState],
-        repertoire: Optional[Repertoire] = None,
-        genotypes: Optional[Genotype] = None,
-        fitnesses: Optional[Fitness] = None,
-        descriptors: Optional[Descriptor] = None,
-        extra_scores: Optional[ExtraScores] = None,
-        emitters_added_list: Metrics = None,
-        selection_timestep: int = 1,
-    ) -> Optional[BanditState]:
-
-
-        # First update each sub-emitter state
-        new_emitter_states = self.state_update(
-            emitter_state=emitter_state,
-            repertoire=repertoire,
-            genotypes=genotypes,
-            fitnesses=fitnesses,
-            descriptors=descriptors,
-            extra_scores=extra_scores,
-        )
-
-
-        # Then update bandit multi-emitter state based on additions and timestep
-        new_emitter_total_offspring, new_emitter_average_rewards, emitter_bandit_scores = self.calculate_emitter_rewards(
-            emitters_added_list,
-            emitter_state.emitter_masks,
-            emitter_state.emitter_batch_sizes,
-            emitter_state.emitter_average_rewards,
-            emitter_state.emitter_total_offspring,
-            emitter_state.selection_timestep, 
-        )
-
-        # Get new batch sizes for next iteration
-        new_emitter_batch_sizes = self.update_batch_sizes_from_scores(emitter_bandit_scores)
-
-        # Get masks that correspond to new batch sizes
-        new_emitter_masks = self.get_emitter_masks(new_emitter_batch_sizes)
-    
-        bandit_state = BanditState(
-            emitter_average_rewards = new_emitter_average_rewards,
-            emitter_total_offspring = new_emitter_total_offspring,
-            emitter_states = new_emitter_states,
-            emitter_batch_sizes = new_emitter_batch_sizes,
-            emitter_masks = new_emitter_masks,
-            selection_timestep = selection_timestep + 1,
-        )
-
-        return bandit_state
-
-    @partial(jax.jit, static_argnames=("self",))
     def state_update(
         self,
-        emitter_state: Optional[BanditState],
+        emitter_state: Optional[BanditMultiEmitterState],
         repertoire: Optional[Repertoire] = None,
         genotypes: Optional[Genotype] = None,
         fitnesses: Optional[Fitness] = None,
@@ -270,73 +309,6 @@ class BanditMultiEmitter(MultiEmitter):
         # return the update global emitter state
         return tuple(emitter_states)
 
-
-    @partial(jax.jit, static_argnames=("self",))     
-    def calculate_emitter_rewards(
-        self,
-        emitters_added_list: jnp.ndarray,
-        emitter_masks: jnp.ndarray,
-        emitter_batch_sizes: jnp.ndarray,
-        emitter_average_rewards: jnp.ndarray,
-        emitter_total_offspring: jnp.ndarray,
-        selection_timestep: int, 
-    ) -> Tuple[jnp.array, jnp.array, jnp.array]:
-
-        # Find emitter counts for all emitters
-        all_emitter_added_counts = emitter_masks * emitters_added_list
-
-        # Find rewards of each emitter
-
-        emitter_counts = jnp.sum(all_emitter_added_counts, axis=-1)
-        emitters_rewards = emitter_counts/emitter_batch_sizes
-
-        # Update total offspring counts of each emitter
-        new_emitter_total_offspring  = emitter_total_offspring + emitter_batch_sizes
-        
-        # Update average reward of emitter
-        new_emitter_average_rewards = self.update_emitter_average_rewards(emitters_rewards, 
-                                            emitter_average_rewards,
-                                            selection_timestep)
-
-        # calculate uncertainty term of bandit score
-        uncertainty_terms = self.calculate_uncertainty_term(new_emitter_total_offspring, emitter_batch_sizes)
-
-        # Calculate emitter success scores
-        emitter_bandit_scores = new_emitter_average_rewards + uncertainty_terms
-
-        return  new_emitter_total_offspring, new_emitter_average_rewards, jnp.array(emitter_bandit_scores)
-
-
-    @partial(jax.jit, static_argnames=("self",))   
-    def update_emitter_average_rewards(
-        self,
-        new_emitter_rewards: jnp.array,
-        emitter_average_rewards: jnp.array,
-        selection_timestep: int,
-    ) -> None:
-
-        # update average rewards of
-    
-        new_emitter_average_rewards = []
-        for emitter_index, new_emitter_reward in enumerate(new_emitter_rewards):
-            new_average = (selection_timestep - 1)/selection_timestep * emitter_average_rewards[emitter_index] + new_emitter_reward/selection_timestep
-            new_emitter_average_rewards.append(new_average)
-                
-        return jnp.array(new_emitter_average_rewards)
-
-
-    
-    @partial(jax.jit, static_argnames=("self",))   
-    def calculate_uncertainty_term(
-        self,
-        emitter_total_offspring,
-        emitter_batch_sizes,
-    )-> Tuple[float, ...]:
-        
-        uncertainty_terms = self.bandit_scaling_param * jnp.sqrt(jnp.log(jnp.sum(emitter_total_offspring))/emitter_total_offspring)
-
-        return jnp.array(uncertainty_terms)
-
     @partial(jax.jit, static_argnames=("self",))   
     def update_batch_sizes_from_scores(self, 
         emitter_bandit_scores: jnp.ndarray,
@@ -353,6 +325,7 @@ class BanditMultiEmitter(MultiEmitter):
         new_batch_sizes = new_batch_sizes.at[-1].set(final_batch_size)
 
         return jnp.array(new_batch_sizes, dtype=int)
+        
 
     @partial(jax.jit, static_argnames=("self",))   
     def update_added_counts(

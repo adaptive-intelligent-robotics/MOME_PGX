@@ -12,9 +12,7 @@ from qdax import environments
 from qdax.core.emitters.bandit_mopga_emitter import (
     BanditMOPGAConfig, 
     BanditMOPGAEmitter, 
-    DynamicBanditMOPGAConfig, 
-    DynamicBanditMOPGAEmitter,
-    DynamicBanditManyEmitters
+    BanditManyEmitters
 )
 from qdax.core.neuroevolution.mdp_utils import scoring_function
 from qdax.core.neuroevolution.networks.networks import MLP
@@ -54,7 +52,6 @@ class ExperimentConfig:
     total_batch_size: int
     bandit_scaling_param: float
     dynamic_window_size: int
-    dynamic_emitter: bool
     many_emitters: bool
 
     # Logging parameters
@@ -156,76 +153,35 @@ def main(config: ExperimentConfig) -> None:
     )
 
     # Define the PG-emitter config
-    
+    mopga_emitter_config = BanditMOPGAConfig(
+        num_objective_functions=config.num_objective_functions,
+        total_batch_size=config.total_batch_size,
+        bandit_scaling_param=config.bandit_scaling_param,
+        dynamic_window_size=config.dynamic_window_size,
+        critic_hidden_layer_size=config.critic_hidden_layer_size,
+        critic_learning_rate=config.critic_learning_rate,
+        greedy_learning_rate=config.greedy_learning_rate,
+        policy_learning_rate=config.policy_learning_rate,
+        noise_clip=config.noise_clip,
+        policy_noise=config.policy_noise,
+        discount=config.discount,
+        reward_scaling=config.reward_scaling,
+        replay_buffer_size=config.replay_buffer_size,
+        soft_tau_update=config.soft_tau_update,
+        policy_delay=config.policy_delay,
+        num_critic_training_steps=config.num_critic_training_steps,
+        num_pg_training_steps=config.num_pg_training_steps
+    )
 
-
-
-
-    if config.dynamic_emitter: 
-
-        print("USING DYNAMIC BANDIT MULTI EMITTER")
-
-
-        mopga_emitter_config = DynamicBanditMOPGAConfig(
-            num_objective_functions=config.num_objective_functions,
-            total_batch_size=config.total_batch_size,
-            bandit_scaling_param=config.bandit_scaling_param,
-            dynamic_window_size=config.dynamic_window_size,
-            critic_hidden_layer_size=config.critic_hidden_layer_size,
-            critic_learning_rate=config.critic_learning_rate,
-            greedy_learning_rate=config.greedy_learning_rate,
-            policy_learning_rate=config.policy_learning_rate,
-            noise_clip=config.noise_clip,
-            policy_noise=config.policy_noise,
-            discount=config.discount,
-            reward_scaling=config.reward_scaling,
-            replay_buffer_size=config.replay_buffer_size,
-            soft_tau_update=config.soft_tau_update,
-            policy_delay=config.policy_delay,
-            num_critic_training_steps=config.num_critic_training_steps,
-            num_pg_training_steps=config.num_pg_training_steps
+    if config.many_emitters:
+        bandit_mopga_emitter = BanditManyEmitters(
+            config=mopga_emitter_config,
+            policy_network=policy_network,
+            env=env,
+            variation_fn=variation_function,
         )
 
-        if config.many_emitters:
-            bandit_mopga_emitter = DynamicBanditManyEmitters(
-                config=mopga_emitter_config,
-                policy_network=policy_network,
-                env=env,
-                variation_fn=variation_function,
-            )
-
-        else: 
-
-            bandit_mopga_emitter = DynamicBanditMOPGAEmitter(
-                config=mopga_emitter_config,
-                policy_network=policy_network,
-                env=env,
-                variation_fn=variation_function,
-            )
-
-    
-    else:
-        print("USING BANDIT MULTI EMITTER")
-
-        mopga_emitter_config = BanditMOPGAConfig(
-            num_objective_functions=config.num_objective_functions,
-            total_batch_size=config.total_batch_size,
-            bandit_scaling_param=config.bandit_scaling_param,
-            critic_hidden_layer_size=config.critic_hidden_layer_size,
-            critic_learning_rate=config.critic_learning_rate,
-            greedy_learning_rate=config.greedy_learning_rate,
-            policy_learning_rate=config.policy_learning_rate,
-            noise_clip=config.noise_clip,
-            policy_noise=config.policy_noise,
-            discount=config.discount,
-            reward_scaling=config.reward_scaling,
-            replay_buffer_size=config.replay_buffer_size,
-            soft_tau_update=config.soft_tau_update,
-            policy_delay=config.policy_delay,
-            num_critic_training_steps=config.num_critic_training_steps,
-            num_pg_training_steps=config.num_pg_training_steps
-        )
-
+    else: 
         bandit_mopga_emitter = BanditMOPGAEmitter(
             config=mopga_emitter_config,
             policy_network=policy_network,
@@ -233,6 +189,7 @@ def main(config: ExperimentConfig) -> None:
             variation_fn=variation_function,
         )
 
+    
     bandit_mome = RunBanditMOPGA(
         pareto_front_max_length=config.pareto_front_max_length,
         num_descriptor_dimensions=env.behavior_descriptor_length,
