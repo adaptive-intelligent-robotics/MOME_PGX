@@ -27,7 +27,7 @@ class AblationPGAMEEmitter(MultiEmitter):
         self._variation_fn = variation_fn
 
         ga_batch_size = config.mutation_ga_batch_size
-        qpg_batch_size = config.mutation_qpg_batch_size * 2
+        qpg_batch_size = config.mutation_qpg_batch_size
 
         emitters = []
 
