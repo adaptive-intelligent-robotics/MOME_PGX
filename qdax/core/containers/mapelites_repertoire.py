@@ -172,10 +172,10 @@ class MapElitesRepertoire(flax.struct.PyTreeNode):
         flat_genotypes = jax.vmap(flatten_genotype)(self.genotypes)
 
         # save data
-        jnp.save(path + "genotypes.npy", flat_genotypes)
-        jnp.save(path + "fitnesses.npy", self.fitnesses)
-        jnp.save(path + "descriptors.npy", self.descriptors)
-        jnp.save(path + "centroids.npy", self.centroids)
+        jnp.save(path + "map_elites_genotypes.npy", flat_genotypes)
+        jnp.save(path + "map_elites_fitnesses.npy", self.fitnesses)
+        jnp.save(path + "map_elites_descriptors.npy", self.descriptors)
+        jnp.save(path + "map_elites_centroids.npy", self.centroids)
 
     @classmethod
     def load(cls, reconstruction_fn: Callable, path: str = "./") -> MapElitesRepertoire:
