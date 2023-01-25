@@ -149,6 +149,7 @@ class RunPGA:
         init_time = time.time()
 
         num_pga_centroids = self.num_centroids * self.pareto_front_max_length
+
         centroids, random_key = compute_cvt_centroids(
             num_descriptors=self.num_descriptor_dimensions,
             num_init_cvt_samples=self.num_init_cvt_samples,
@@ -245,20 +246,20 @@ class RunPGA:
                 if self.num_descriptor_dimensions == 2:
                     plotter.plot_repertoire(
                         mome_passive_repertoire,
-                        centroids,
+                        moqd_passive_centroids,
                         metrics,
                         save_dir=_repertoire_plots_save_dir,
                         save_name=f"{iteration}",
                     )
                     plotter.plot_num_solutions(
-                        centroids,
+                        moqd_passive_centroids,
                         metrics,
                         save_dir=_repertoire_num_sols_save_dir,
                         save_name=f"{iteration}",
                     )
                     
                     plotter.plot_normalised_repertoire(
-                        centroids,
+                        moqd_passive_centroids,
                         metrics,
                         save_dir=_normalised_repertoire_save_dir,
                         save_name=f"{iteration}",
@@ -303,6 +304,7 @@ class RunPGA:
 
         # Save final repertoire
         repertoire.save(path=_final_repertoire_dir)
+        mome_passive_repertoire.save(path=_final_repertoire_dir)
 
         # Save visualisation of best repertoire
         if self.save_final_visualisations:
@@ -321,21 +323,21 @@ class RunPGA:
         if self.num_descriptor_dimensions == 2:
             plotter.plot_repertoire(
                 mome_passive_repertoire,
-                centroids,
+                moqd_passive_centroids,
                 metrics,
                 save_dir=_final_plots_dir,
                 save_name="final",
             )
 
             plotter.plot_num_solutions(
-                        centroids,
+                        moqd_passive_centroids,
                         metrics,
                         save_dir=_final_plots_dir,
                         save_name=f"final",
             )
         
             plotter.plot_normalised_repertoire(
-                centroids,
+                moqd_passive_centroids,
                 metrics,
                 save_dir=_final_plots_dir,
                 save_name=f"final",
@@ -353,4 +355,4 @@ class RunPGA:
 
         )
 
-        return repertoire, centroids, random_key, metrics, metrics_history
+        return repertoire, moqd_passive_centroids, random_key, metrics, metrics_history
