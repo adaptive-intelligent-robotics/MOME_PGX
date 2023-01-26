@@ -242,6 +242,7 @@ class BiasedSamplingMOMERepertoire(MOMERepertoire):
         Returns:
             The updated pareto front.
         """
+        # mask: 1 if fitness  is -inf, 0 otherwise
         # get dimensions
         batch_size = new_batch_of_fitnesses.shape[0]
         num_criteria = new_batch_of_fitnesses.shape[1]
@@ -267,157 +268,114 @@ class BiasedSamplingMOMERepertoire(MOMERepertoire):
         cat_bool_front = compute_masked_pareto_front(
             batch_of_criteria=cat_fitnesses, mask=cat_mask
         )
-
-        # Gather container addition metrics
-        added_bool = jnp.take(cat_bool_front, -1) # Count if new genotype is now on cell PF
-        removed_count = jnp.sum(~mask) - jnp.sum(cat_bool_front[:-1]) # Count how many 
-
-        # get corresponding indicesß
+        # get corresponding indices
+        # have to add 50 to distinguish whether index 0 is part of front or not
         indices = (
             jnp.arange(start=0, stop=pareto_front_len + batch_size) * cat_bool_front
         )
         indices = indices + ~cat_bool_front * (batch_size + pareto_front_len - 1)
         indices = jnp.sort(indices)
 
-        # get new fitness, genotypes and descriptors
-        new_front_fitness = jnp.take(cat_fitnesses, indices, axis=0)
-        new_front_genotypes = jax.tree_util.tree_map(
+        # get fitnesses, genotypes and descriptors of front (with non-front elements all equal to final element)
+        all_front_fitnesses = jnp.take(cat_fitnesses, indices, axis=0)
+        all_front_genotypes = jax.tree_util.tree_map(
             lambda x: jnp.take(x, indices, axis=0), cat_genotypes
         )
-        new_front_descriptors = jnp.take(cat_descriptors, indices, axis=0)
+        all_front_descriptors = jnp.take(cat_descriptors, indices, axis=0)
 
-        # compute new mask
+        # compute new mask (which is to be used on all_front_genotypes etc)
         num_front_elements = jnp.sum(cat_bool_front)
         new_mask_indices = jnp.arange(start=0, stop=batch_size + pareto_front_len)
         new_mask_indices = (num_front_elements - new_mask_indices) > 0
-
-        new_mask = jnp.where(
+        new_front_mask = jnp.where(
             new_mask_indices,
             jnp.ones(shape=batch_size + pareto_front_len, dtype=bool),
             jnp.zeros(shape=batch_size + pareto_front_len, dtype=bool),
         )
 
+        # get fitnesses, descriptors and genotypes on front, with non-front values set to 0/-inf 
         fitness_mask = jnp.repeat(
-            jnp.expand_dims(new_mask, axis=-1), num_criteria, axis=-1
+            jnp.expand_dims(new_front_mask, axis=-1), num_criteria, axis=-1
         )
-        new_front_fitness = new_front_fitness * fitness_mask
+        
+        # set non-front fitnesses = -inf
+        all_front_fitnesses = all_front_fitnesses * fitness_mask  - jnp.inf * jnp.expand_dims(~new_front_mask, axis=-1) 
+        all_front_fitnesses = jnp.where(jnp.isnan(all_front_fitnesses), -jnp.inf*jnp.ones_like(all_front_fitnesses), all_front_fitnesses)
 
-        front_size = len(pareto_front_fitnesses)  # type: ignore
-        new_front_fitness = new_front_fitness[:front_size, :]
-
-        new_front_genotypes = jax.tree_util.tree_map(
-            lambda x: x * new_mask_indices[0], new_front_genotypes
+        all_front_genotypes = jax.tree_util.tree_map(
+            lambda x: x * new_mask_indices[0], all_front_genotypes
         )
-        new_front_genotypes = jax.tree_util.tree_map(
-            lambda x: x[:front_size], new_front_genotypes
-        )
-
         descriptors_mask = jnp.repeat(
-            jnp.expand_dims(new_mask, axis=-1), descriptors_dim, axis=-1
+            jnp.expand_dims(new_front_mask, axis=-1), descriptors_dim, axis=-1
         )
-        new_front_descriptors = new_front_descriptors * descriptors_mask
-        new_front_descriptors = new_front_descriptors[:front_size, :]
+        all_front_descriptors = all_front_descriptors * descriptors_mask
+        
+        # reduce pareto front length to max length by removinf solutions with smallest crowding distnace
+        empty_mask = jnp.any(all_front_fitnesses == -jnp.inf, axis=-1)
 
-        new_mask = ~new_mask[:front_size]
+        # create mask over objective dims
+        mask_dist = jnp.column_stack([~empty_mask] * all_front_fitnesses.shape[1])
 
-        return new_front_fitness, new_front_genotypes, new_front_descriptors, new_mask, added_bool, removed_count
-
-    @jax.jit
-    def add(
-        self,
-        batch_of_genotypes: Genotype,
-        batch_of_descriptors: Descriptor,
-        batch_of_fitnesses: Fitness,
-    ) -> MOMERepertoire:
-        """Insert a batch of elements in the repertoire.
-
-        Shape of the batch_of_genotypes (if an array):
-        (batch_size, genotypes_dim)
-        Shape of the batch_of_descriptors: (batch_size, num_descriptors)
-        Shape of the batch_of_fitnesses: (batch_size, num_criteria)
-
-        Args:
-            batch_of_genotypes: a batch of genotypes that we are trying to
-                insert into the repertoire.
-            batch_of_descriptors: the descriptors of the genotypes we are
-                trying to add to the repertoire.
-            batch_of_fitnesses: the fitnesses of the genotypes we are trying
-                to add to the repertoire.
-
-        Returns:
-            The updated repertoire with potential new individuals.
-        """
-        # get the indices that corresponds to the descriptors in the repertoire
-        batch_of_indices = get_cells_indices(batch_of_descriptors, self.centroids)
-        batch_of_indices = jnp.expand_dims(batch_of_indices, axis=-1)
-
-        def _add_one(
-            carry: MOMERepertoire,
-            data: Tuple[Genotype, Descriptor, Fitness, jnp.ndarray],
-        ) -> Tuple[MOMERepertoire, Any]:
-            # unwrap data
-            genotype, descriptors, fitness, index = data
-
-            index = index.astype(jnp.int32)
-
-            # get current repertoire cell data
-            cell_genotype = jax.tree_util.tree_map(lambda x: x[index][0], carry.genotypes)
-            cell_fitness = carry.fitnesses[index][0]
-            cell_descriptor = carry.descriptors[index][0]
-            cell_mask = jnp.any(cell_fitness == -jnp.inf, axis=-1)
-
-            new_genotypes = jax.tree_util.tree_map(lambda x: jnp.expand_dims(x, axis=0), genotype)
-
-            # update pareto front
-            (
-                cell_fitness,
-                cell_genotype, # new pf for cell 
-                cell_descriptor,
-                cell_mask,
-                added_bool,
-                removed_count,
-            ) = self._update_masked_pareto_front(
-                pareto_front_fitnesses=cell_fitness,
-                pareto_front_genotypes=cell_genotype,
-                pareto_front_descriptors=cell_descriptor,
-                mask=cell_mask,
-                new_batch_of_fitnesses=jnp.expand_dims(fitness, axis=0),
-                new_batch_of_genotypes=new_genotypes,
-                new_batch_of_descriptors=jnp.expand_dims(descriptors, axis=0),
-                new_mask=jnp.zeros(shape=(1,), dtype=bool),
-            )
-
-            # update cell fitness
-            cell_fitness = cell_fitness - jnp.inf * jnp.expand_dims(cell_mask, axis=-1)
-
-            # update grid
-            new_genotypes = jax.tree_util.tree_map(
-                lambda x, y: x.at[index].set(y), carry.genotypes, cell_genotype
-            )
-            new_fitnesses = carry.fitnesses.at[index].set(cell_fitness)
-            new_descriptors = carry.descriptors.at[index].set(cell_descriptor)
-            carry = carry.replace(  # type: ignore
-                genotypes=new_genotypes,
-                descriptors=new_descriptors,
-                fitnesses=new_fitnesses,
-            )
-
-            # return new grid
-            return carry, [added_bool, removed_count]
-
-        # scan the addition operation for all the data
-        self, container_addition_metrics = jax.lax.scan(
-            _add_one,
-            self,
-            (
-                batch_of_genotypes,
-                batch_of_descriptors,
-                batch_of_fitnesses,
-                batch_of_indices,
-            ),
+        # calculate min and max of fitnesses, ignoring NaNs
+        score_amplitude = jnp.nanmax(all_front_fitnesses*mask_dist, axis=0) - jnp.nanmin(all_front_fitnesses*mask_dist, axis=0)
+        
+        dist_fitnesses = (
+            all_front_fitnesses + 3 * score_amplitude * jnp.ones_like(all_front_fitnesses) * mask_dist
         )
 
-        return self, container_addition_metrics
+        sorted_index = jnp.argsort(dist_fitnesses, axis=0)
+        srt_fitnesses = all_front_fitnesses[sorted_index, jnp.arange(num_criteria)]
+
+        # get the distances
+        dists = jnp.row_stack(
+            [srt_fitnesses, jnp.full(num_criteria, jnp.inf)]
+        ) - jnp.row_stack([jnp.full(num_criteria, -jnp.inf), srt_fitnesses])
+
+        # Prepare the distance to last and next vectors
+        dist_to_last = dists[:-1] / score_amplitude
+        dist_to_next = dists[1:] / score_amplitude
+
+        # Sum up the distances and reorder
+        j = jnp.argsort(sorted_index, axis=0)
+        crowding_distances = (
+            jnp.sum(
+                (
+                    dist_to_last[j, jnp.arange(num_criteria)]
+                    + dist_to_next[j, jnp.arange(num_criteria)]
+                ),
+                axis=1,
+            )
+            / num_criteria
+        )
+
+        # replace empty distances with -inf
+        crowding_distances = jnp.where(jnp.isnan(crowding_distances), -jnp.inf, crowding_distances)
+
+        # Get indices of smallest crowding distances
+        sorted_distances_index = jnp.argsort(crowding_distances)
+
+        # keep solutions with largest crowding distances
+        keep_indices = sorted_distances_index[-pareto_front_len:]
+
+        # turn empty fitnesses back to zero 
+        all_front_fitnesses = jnp.where(all_front_fitnesses == -jnp.inf*jnp.ones_like(all_front_fitnesses), 
+            jnp.zeros_like(all_front_fitnesses), 
+            all_front_fitnesses)
+
+        # get new pf with only 
+        new_front_fitnesses = jnp.take(all_front_fitnesses, keep_indices, axis=0)
+        new_front_genotypes = jax.tree_util.tree_map(
+            lambda x: jnp.take(x, keep_indices, axis=0), all_front_genotypes
+        )
+        new_front_descriptors = jnp.take(all_front_descriptors, keep_indices, axis=0)
+        new_mask = jnp.take(empty_mask, keep_indices)
+
+        # Gather container addition metrics
+        added_bool = jnp.any(new_front_fitnesses == new_batch_of_fitnesses) # check if new fitness is in pf
+        removed_count = jnp.sum(~mask)- jnp.sum(~new_mask) - added_bool.astype(int) # Count how many were on front before
+
+        return new_front_fitnesses, new_front_genotypes, new_front_descriptors, new_mask, added_bool, removed_count
+
 
     @classmethod
     def init(  # type: ignore
