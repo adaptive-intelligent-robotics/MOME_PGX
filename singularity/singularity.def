@@ -115,7 +115,7 @@ From: airl_lab/default/airl_env:qdax_f57720d0
     echo
     echo "Running python3 brax_mopga.py bias_sampling=True "$@" "
     echo
-    python3 brax_bandit_mopga.py bias_sampling=True algo_name="biased_mopga" "$@"
+    python3 brax_mopga.py bias_sampling=True algo_name="biased_mopga" "$@"
 
 %apprun biased_mome
     cd /project/
