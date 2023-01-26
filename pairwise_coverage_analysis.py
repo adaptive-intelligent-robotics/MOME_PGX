@@ -47,7 +47,7 @@ def analyse_pairwise_coverage(parent_dirname: str,
 
         for experiment in experiment_names:
             #print(f"------- Finding global PF for: {experiment} --------")
-            global_pareto_fronts = get_pfs(env, env_dirname, experiment)
+            global_pareto_fronts = get_pfs(env_dirname, experiment)
             env_pareto_fronts.append(global_pareto_fronts)
         
         median_coverages = calculate_pairwise_coverage(env_pareto_fronts, experiment_names)
@@ -61,7 +61,6 @@ def analyse_pairwise_coverage(parent_dirname: str,
 
 
 def get_pfs(
-    env_name: str,
     dirname: str, 
     experiment_name: str
 )-> pd.DataFrame:
@@ -72,6 +71,7 @@ def get_pfs(
         fitnesses = jnp.load(os.path.join(experiment_replication, "final/repertoire/fitnesses.npy"))
         global_pareto_front = get_global_pareto_front(fitnesses)
         global_pareto_fronts.append(global_pareto_front)
+    
     return global_pareto_fronts
 
 
@@ -83,7 +83,6 @@ def calculate_pairwise_coverage(
 
     metrics = []
     for replication in range(num_replications):
-        #print(f"----  CALCULATING PAIRWISE COVERAGE FOR REPLICATION: {replication}  -----")
         rep_global_pfs = []
         for exp_num in range(len(experiment_names)):
             exp_rep_global_pf = global_pareto_fronts[exp_num][replication]
@@ -110,9 +109,7 @@ def calculate_rep_coverage(
             exp1_dominated = jax.vmap(partial_dominance_fn)(rep_global_pfs[exp1_num])
             exp1_dominated_proportion = sum(exp1_dominated)/len(exp1_dominated)
             exp1_dominated_list.append(exp1_dominated_proportion)
-            #print(f"{exp2} dominates {exp1_dominated_proportion} of {exp1}")
         rep_df.loc[exp1] = exp1_dominated_list
-    
     return rep_df
     
 
@@ -120,25 +117,32 @@ def get_global_pareto_front(
     fitnesses: jnp.array
 ):
 
-    fitnesses = jnp.concatenate(fitnesses, axis=0)
+    fitnesses= jnp.concatenate(fitnesses, axis=0)
     mask = jnp.any(fitnesses == -jnp.inf, axis=-1)
     pareto_mask = compute_masked_pareto_front(fitnesses, mask)
-    pareto_front =  fitnesses[pareto_mask]
+    pareto_indices = jnp.argwhere(pareto_mask).squeeze()
+    pareto_front = jnp.take(fitnesses, pareto_indices, axis=0)
+    
     return pareto_front
 
 
 if __name__ == '__main__':
+
     parent_dirname = "results/paper_results/"
 
     experiment_names = [
         "mome",
         "mopga",
         "nsga2",
-        #"pga",
+        "pga",
         "spea2",
     ]
 
     env_names=["walker2d_multi",
+    "ant_multi",
+    "hopper_multi",
+    "humanoid_multi",
+    "halfcheetah_multi",
     ]
 
     analyse_pairwise_coverage(parent_dirname, 
