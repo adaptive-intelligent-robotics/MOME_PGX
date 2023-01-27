@@ -167,7 +167,6 @@ def main(config: ExperimentConfig) -> None:
         scoring_fn=brax_scoring_function,
         emitter=mixing_emitter,
         metrics_fn=metrics_function,
-        num_objective_functions=config.num_objective_functions,
         metrics_log_period=config.metrics_log_period,
         plot_repertoire_period=config.plot_repertoire_period,
         checkpoint_period=config.checkpoint_period,

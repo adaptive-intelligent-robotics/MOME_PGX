@@ -51,7 +51,6 @@ class RunMOME:
                 scoring_fn: Callable,
                 emitter: Emitter,
                 metrics_fn: Callable,
-                num_objective_functions: int,
                 metrics_log_period: int,
                 plot_repertoire_period: int,
                 checkpoint_period: int,
@@ -73,7 +72,6 @@ class RunMOME:
         self.scoring_fn = scoring_fn
         self.emitter = emitter
         self.metrics_fn = metrics_fn
-        self.num_objective_functions = num_objective_functions
         self.metrics_log_period = metrics_log_period
         self.plot_repertoire_period = plot_repertoire_period
         self.checkpoint_period = checkpoint_period
