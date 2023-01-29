@@ -22,7 +22,7 @@ from qdax.utils.plotting import (
 )
 
 
-def analyse_pairwise_coverage(parent_dirname: str,
+def print_pairwise_coverage(parent_dirname: str,
     env_names: List[str],
     experiment_names: List[str],
 ) -> None:
@@ -124,28 +124,3 @@ def get_global_pareto_front(
     pareto_front = jnp.take(fitnesses, pareto_indices, axis=0)
     
     return pareto_front
-
-
-if __name__ == '__main__':
-
-    parent_dirname = "results/paper_results/"
-
-    experiment_names = [
-        "mome",
-        "mopga",
-        "nsga2",
-        "pga",
-        "spea2",
-    ]
-
-    env_names=["walker2d_multi",
-    "ant_multi",
-    "hopper_multi",
-    "humanoid_multi",
-    "halfcheetah_multi",
-    ]
-
-    analyse_pairwise_coverage(parent_dirname, 
-        env_names,
-        experiment_names,
-    )
