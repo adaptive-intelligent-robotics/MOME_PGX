@@ -25,6 +25,7 @@ def run_analysis(parent_dirname: str,
     emitter_labels: Dict,
     grid_plot_metrics_list: List[str],
     grid_plot_metrics_labels: List[str],
+    grid_plot_linestyles: Dict,
     plot_envs: bool=True,
     plot_emitter_counts: bool=True,
     plot_grid: bool=True,
@@ -69,6 +70,7 @@ def run_analysis(parent_dirname: str,
             experiment_labels,
             grid_plot_metrics_list,
             grid_plot_metrics_labels,
+            grid_plot_linestyles,
             all_medians, 
             all_lqs, 
             all_uqs
@@ -163,6 +165,19 @@ if __name__ == '__main__':
     grid_plot_metrics_list = ["moqd_score", "global_hypervolume", "max_sum_scores", "coverage"]
     grid_plot_metrics_labels = ["MOQD Score", "Global Hypervolume", "Max Sum Scores", "Coverage"]
 
+    # Linestyles for experiments in grid plot
+    grid_plot_linestyles = {"mome": 'solid',
+            "mopga": 'dashed',
+            "biased_mopga": 'solid',
+            "mopga_only_forward": 'dashed',
+            "mopga_only_energy": 'dashed',
+            "nsga2": 'solid',
+            "spea2": 'solid',
+            "pga": 'solid',
+            "biased_mome": 'dashed',
+    }
+
+
 
     run_analysis(parent_dirname, 
         env_names,
@@ -173,6 +188,7 @@ if __name__ == '__main__':
         emitter_labels,
         grid_plot_metrics_list,
         grid_plot_metrics_labels,
+        grid_plot_linestyles,
         plot_envs=False,
         plot_emitter_counts=False,
         plot_grid=True,

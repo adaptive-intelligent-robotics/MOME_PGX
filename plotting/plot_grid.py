@@ -3,11 +3,7 @@ import numpy as np
 import os
 import pandas as pd
 import seaborn as sns
-
-sns.set_palette("muted")
-
-from typing import List, Any
-
+from typing import List, Any, Dict
 
 
 # CHANGE THESE TO ADJUST APPEARANCE OF PLOT
@@ -20,9 +16,19 @@ SMALL_GRID_FONT_SIZE = 10
 TITLE_FONT_WEIGHT = 'bold' # Can be: ['normal' | 'bold' | 'heavy' | 'light' | 'ultrabold' | 'ultralight']
 LEGEND_FONT_SIZE = 'xx-large'
 
+# ----- colour palettes ------
+COLOUR_PALETTE = "Pastel"
+
 # ----  spacing -----
-
-
+#'axes.labelpad': 0.8*num_rows,
+#'axes.titlesize': GRID_AXES_FONT_SIZE,
+#'axes.titlepad': GRID_AXES_PAD,
+#'axes.linewidth': 0.1*num_rows,
+#'xtick.labelsize': SUBPLOT_TICK_SIZE,
+#'ytick.labelsize': SUBPLOT_TICK_SIZE,
+#'axes.xmargin': 0.1,
+#'axes.ymargin': 0.1,
+#'font.family': 'serif',
 
 def customize_axis(ax: Any) -> Any:
     """
@@ -53,6 +59,7 @@ def plot_experiments_grid(parent_dirname,
     experiment_labels,
     grid_plot_metrics_list,
     grid_plot_metrics_labels,
+    grid_plot_linestyles,
     medians,
     lqs, 
     uqs,
@@ -61,30 +68,18 @@ def plot_experiments_grid(parent_dirname,
     num_rows = len(grid_plot_metrics_list)
     num_cols = len(env_names)
 
+    # Create color palette
+    experiment_colours = sns.color_palette(COLOUR_PALETTE, len(experiment_names))
+    colour_frame = pd.DataFrame(data={"Label": experiment_names, "Colour": experiment_colours})
 
-    GRID_AXES_FONT_SIZE = 30
-    GRID_AXES_PAD = 0.5
-    SUBPLOT_TICK_SIZE = 20
-
-    
     params = {
         'pdf.fonttype': 42,
         'ps.fonttype': 42,
         'axes.titlesize': BIG_GRID_FONT_SIZE,
         'axes.titleweight': TITLE_FONT_WEIGHT,
         'figure.dpi': FIGURE_DPI,
-        #'axes.labelpad': 0.8*num_rows,
-        # title params
-        #'axes.titlesize': GRID_AXES_FONT_SIZE,
-        #'axes.titlepad': GRID_AXES_PAD,
-        #'axes.linewidth': 0.1*num_rows,
-        #'xtick.labelsize': SUBPLOT_TICK_SIZE,
-        #'ytick.labelsize': SUBPLOT_TICK_SIZE,
-        #'axes.xmargin': 0.1,
-        #'axes.ymargin': 0.1,
-        #'font.family': 'serif',
-    }
 
+    }
 
     plt.rcParams.update(params)
     
@@ -92,7 +87,6 @@ def plot_experiments_grid(parent_dirname,
         figsize=(24, 20),
         nrows=num_rows, 
         ncols=num_cols,
-        #constrained_layout=True
     )
 
     for row, metric in enumerate(grid_plot_metrics_list):
@@ -103,7 +97,10 @@ def plot_experiments_grid(parent_dirname,
                 lq_metrics = lqs[col],
                 uq_metrics = uqs[col],
                 metrics_label=metric,
+                experiment_names=experiment_names,
                 experiment_labels = experiment_labels,
+                experiment_linestyles = grid_plot_linestyles,
+                colour_frame = colour_frame,
             )
 
             if row == 0:
@@ -127,12 +124,12 @@ def plot_experiments_grid(parent_dirname,
     )
     
     plt.subplots_adjust(
-        left  = 0.1,  # the left side of the subplots of the figure
+        left  = 0.1,    # the left side of the subplots of the figure
         right = 0.9,    # the right side of the subplots of the figure
         bottom = 0.1,   # the bottom of the subplots of the figure
         top = 0.9,      # the top of the subplots of the figure
         wspace = 0.35,  # the amount of width reserved for blank space between subplots
-        hspace = 0.3, 
+        hspace = 0.3,  
     )
 
     plt.savefig(os.path.join(parent_dirname, f"grid_plot"), bbox_inches='tight')
@@ -146,7 +143,10 @@ def plot_grid_square(
     lq_metrics: List[pd.DataFrame],
     uq_metrics: List[pd.DataFrame],
     metrics_label: str,
+    experiment_names: List[str],
     experiment_labels: List[str],
+    experiment_linestyles: Dict,
+    colour_frame: pd.DataFrame,
     num_iterations: int=4000,
     episode_length: int=1000,
     batch_size: int=256,
@@ -154,6 +154,10 @@ def plot_grid_square(
     """
     Plots one subplot of grid
     """
+
+    # Getting the correct color palette
+    exp_palette = colour_frame["Colour"].values
+    sns.set_palette(exp_palette)
 
     # Visualize the training evolution and final repertoire
     x_range = np.arange(num_iterations + 1) * episode_length * batch_size
@@ -166,7 +170,12 @@ def plot_grid_square(
 
     # Do this second so that legend labels are correct
     for exp_num, exp_name in enumerate(experiment_labels):
-        ax.plot(x_range, median_metrics[exp_num][metrics_label], label=exp_name)
+        ax.plot(x_range, 
+            median_metrics[exp_num][metrics_label], 
+            label=exp_name,
+            linestyle=experiment_linestyles[experiment_names[exp_num]],
+        )
+
         ax.set_xlabel(x_label, fontsize=SMALL_GRID_FONT_SIZE)
 
     for exp_num, exp_name in enumerate(experiment_labels):
