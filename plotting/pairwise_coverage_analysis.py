@@ -1,25 +1,14 @@
-import matplotlib.pyplot as plt
 import numpy as np
 import jax
 import jax.numpy as jnp
 import os
 import pandas as pd
-import random
-import seaborn as sns
 from functools import partial
 
-
-
 from typing import List, Dict, Tuple
-from qdax.core.containers.mome_repertoire import MOMERepertoire
 from qdax.utils.pareto_front import compute_pareto_dominance, compute_masked_pareto_front
 
-from qdax.utils.plotting import ( 
-    plot_2d_map_elites_repertoire, 
-    plot_mome_max_scores_evolution,
-    plot_mome_pareto_fronts, 
-    plot_mome_scores_evolution,
-)
+
 
 
 def print_pairwise_coverage(parent_dirname: str,

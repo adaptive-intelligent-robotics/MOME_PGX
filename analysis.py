@@ -99,9 +99,9 @@ if __name__ == '__main__':
     # Directory names of experiments
     experiment_names = [
         "biased_mopga",
-        "mopga", 
-        "mopga_only_energy",
-        "mopga_only_forward",
+        #"mopga", 
+        #"mopga_only_energy",
+        #"mopga_only_forward",
         "mome", 
         "pga",
         "nsga2",
@@ -110,10 +110,10 @@ if __name__ == '__main__':
 
     # Names of experiments (in same order as above) for legends/titles
     experiment_labels = [
-        "Biased MOPGA",
-        "MOPGA", 
-        "MOPGA (Only Energy)",
-        "MOPGA (Only Forward)",
+        "GAIN-MOME",
+        #"MOPGA", 
+        #"MOPGA (Only Energy)",
+        #"MOPGA (Only Forward)",
         "MOME", 
         "PGA",
         "NSGA-II",
@@ -150,7 +150,6 @@ if __name__ == '__main__':
         "halfcheetah_multi",
         "hopper_multi",
         "walker2d_multi",
-        "humanoid_multi"
     ]
 
     # Legend/Title names of environments
@@ -158,7 +157,6 @@ if __name__ == '__main__':
         "HalfCheetah",
         "Hopper",
         "Walker2d",
-        "Humanoid"
     ]
     
     # Metrics to plot in grid plot
@@ -166,17 +164,22 @@ if __name__ == '__main__':
     grid_plot_metrics_labels = ["MOQD Score", "Global Hypervolume", "Max Sum Scores", "Coverage"]
 
     # Linestyles for experiments in grid plot
-    grid_plot_linestyles = {"mome": 'solid',
-            "mopga": 'dashed',
+    grid_plot_linestyles = {
+            # main
             "biased_mopga": 'solid',
-            "mopga_only_forward": 'dashed',
-            "mopga_only_energy": 'dashed',
-            "nsga2": 'solid',
-            "spea2": 'solid',
-            "pga": 'solid',
-            "biased_mome": 'dashed',
-    }
 
+            # baselines
+            "mome": 'dashed',
+            "pga": (5, (10, 3)),
+            "nsga2": 'dotted',
+            "spea2": 'dashdot',
+
+            # ablations
+            "mopga": 'dashed',
+            "biased_mome": 'dashdot',
+            "mopga_only_forward": 'dotted',
+            "mopga_only_energy": 'solid',
+    }
 
 
     run_analysis(parent_dirname, 
