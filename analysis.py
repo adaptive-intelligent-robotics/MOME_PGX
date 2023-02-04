@@ -16,6 +16,7 @@ from plotting.plot_emitter_counts import plot_env_emitter_counts
 from plotting.plot_final_pfs import plot_global_pfs
 from plotting.plot_grid import plot_experiments_grid
 from plotting.print_min_max_rewards import print_env_min_max_rewards
+from plotting.wilcoxon_analysis import wilcoxon_analysis
 
 def run_analysis(parent_dirname: str,
     env_names: List[str],
@@ -27,6 +28,7 @@ def run_analysis(parent_dirname: str,
     grid_plot_metrics_list: List[str],
     grid_plot_metrics_labels: List[str],
     grid_plot_linestyles: Dict,
+    p_value_metrics_list: List[str],
     plot_envs: bool=True,
     plot_emitter_counts: bool=True,
     plot_grid: bool=True,
@@ -34,6 +36,7 @@ def run_analysis(parent_dirname: str,
     pairwise_coverage_analysis: bool=True,
     plot_global_fronts: bool=True,
     num_replications: int=10,
+    calculate_p_values: bool=True,
 ) -> None:
 
     if plot_global_fronts:
@@ -50,7 +53,15 @@ def run_analysis(parent_dirname: str,
             env_names,
             experiment_names,
         )
-        
+    
+    if calculate_p_values:
+        wilcoxon_analysis(parent_dirname,
+            env_names,
+            experiment_names,
+            p_value_metrics_list,
+            num_replications,
+        )
+    
     all_metrics, all_medians, all_lqs, all_uqs = calculate_quartile_metrics(parent_dirname,
         env_names,
         experiment_names,
@@ -200,6 +211,8 @@ if __name__ == '__main__':
     }
 
 
+    p_value_metrics_list = ["max_hypervolume", "global_hypervolume", "max_sum_scores", "moqd_score"]
+
     run_analysis(parent_dirname, 
         env_names,
         env_labels,
@@ -210,11 +223,13 @@ if __name__ == '__main__':
         grid_plot_metrics_list,
         grid_plot_metrics_labels,
         grid_plot_linestyles,
+        p_value_metrics_list,
         plot_envs=False,
         plot_emitter_counts=False,
         plot_grid=False,
         print_min_max_scores=False,
         pairwise_coverage_analysis=False,
-        plot_global_fronts=True,
+        plot_global_fronts=False,
         num_replications=10,
+        calculate_p_values=True,
     )

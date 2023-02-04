@@ -52,10 +52,12 @@ def plot_global_pfs(parent_dirname: str,
 
     print("Plotting Global PFs for each env, for each experiment")
     
-    _global_pfs_dir = os.path.join(parent_dirname, "global_pfs/")
-    _max_pfs_dir = os.path.join(parent_dirname, "max_pfs/")
-    _global_max_pfs_dir = os.path.join(parent_dirname, "global_and_max_pfs/")
+    _analysis_dir = os.path.join(parent_dirname, "analysis/")
+    _global_pfs_dir = os.path.join(_analysis_dir, "global_pfs/")
+    _max_pfs_dir = os.path.join(_analysis_dir, "max_pfs/")
+    _global_max_pfs_dir = os.path.join(_analysis_dir, "global_and_max_pfs/")
 
+    os.makedirs(_analysis_dir, exist_ok=True)
     os.makedirs(_global_pfs_dir, exist_ok=True)
     os.makedirs(_max_pfs_dir, exist_ok=True)
     os.makedirs(_global_max_pfs_dir, exist_ok=True)
