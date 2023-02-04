@@ -22,7 +22,7 @@ COLOUR_PALETTE = "colorblind"
 
 # ----  spacing -----
 LEFTSPACING = 0.13   # the left side of the subplots of the figure
-RIGHSPACING = 0.9   # the right side of the subplots of the figure
+RIGHTSPACING = 0.9   # the right side of the subplots of the figure
 BOTTOMSPACING = 0.09  # the bottom of the subplots of the figure
 TOPSPACING = 0.87   # the top of the subplots of the figure
 WIDTHSPACING = 0.1  # the proportion of width reserved for blank space between subplots
@@ -74,6 +74,9 @@ def plot_experiments_grid(parent_dirname,
     episode_length: int=1000,
     batch_size: int=256,
  ) -> None:
+
+    _analysis_dir = os.path.join(parent_dirname, "analysis/")
+    os.makedirs(_analysis_dir, exist_ok=True)
 
     num_rows = len(grid_plot_metrics_list)
     num_cols = len(env_names)
@@ -152,14 +155,14 @@ def plot_experiments_grid(parent_dirname,
     
     plt.subplots_adjust(
         left  = LEFTSPACING,    
-        right = RIGHSPACING,    
+        right = RIGHTSPACING,    
         bottom = BOTTOMSPACING,
         top = TOPSPACING,      
         wspace = WIDTHSPACING,  
         hspace = HEIGHTSPACING,  
     )
 
-    plt.savefig(os.path.join(parent_dirname, f"grid_plot"), bbox_inches='tight')
+    plt.savefig(os.path.join(_analysis_dir, f"grid_plot"), bbox_inches='tight')
     plt.close()
 
 
