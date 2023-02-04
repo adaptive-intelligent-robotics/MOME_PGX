@@ -13,6 +13,7 @@ from plotting.load_datasets import calculate_quartile_metrics
 from plotting.pairwise_coverage_analysis import print_pairwise_coverage
 from plotting.plot_env_moqd_metrics import plot_envs_scores_evolution
 from plotting.plot_emitter_counts import plot_env_emitter_counts
+from plotting.plot_final_pfs import plot_global_pfs
 from plotting.plot_grid import plot_experiments_grid
 from plotting.print_min_max_rewards import print_env_min_max_rewards
 
@@ -31,8 +32,25 @@ def run_analysis(parent_dirname: str,
     plot_grid: bool=True,
     print_min_max_scores: bool=True,
     pairwise_coverage_analysis: bool=True,
+    plot_global_fronts: bool=True,
+    num_replications: int=10,
 ) -> None:
 
+    if plot_global_fronts:
+        plot_global_pfs(parent_dirname,
+            env_names,
+            env_labels,
+            experiment_names,
+            experiment_labels,
+            num_replications,
+        )
+
+    if pairwise_coverage_analysis:
+        print_pairwise_coverage(parent_dirname, 
+            env_names,
+            experiment_names,
+        )
+        
     all_metrics, all_medians, all_lqs, all_uqs = calculate_quartile_metrics(parent_dirname,
         env_names,
         experiment_names,
@@ -82,11 +100,9 @@ def run_analysis(parent_dirname: str,
             all_metrics
         )    
 
-    if pairwise_coverage_analysis:
-        print_pairwise_coverage(parent_dirname, 
-            env_names,
-            experiment_names,
-        )
+
+    
+
 
 
 
@@ -102,6 +118,7 @@ if __name__ == '__main__':
         #"mopga", 
         #"mopga_only_energy",
         #"mopga_only_forward",
+        #"biased_mome"
         "mome", 
         "pga",
         "nsga2",
@@ -110,10 +127,11 @@ if __name__ == '__main__':
 
     # Names of experiments (in same order as above) for legends/titles
     experiment_labels = [
-        "GAIN-MOME",
-        #"MOPGA", 
-        #"MOPGA (Only Energy)",
-        #"MOPGA (Only Forward)",
+        "MOME-PGX",
+        #"MO-PGA", 
+        #"MO-PGA (Only Energy)",
+        #"MO-PGA (Only Forward)",
+        #"MOME + Crowding"
         "MOME", 
         "PGA",
         "NSGA-II",
@@ -176,9 +194,9 @@ if __name__ == '__main__':
 
             # ablations
             "mopga": 'dashed',
-            "biased_mome": 'dashdot',
+            "biased_mome": (5, (10, 3)),
             "mopga_only_forward": 'dotted',
-            "mopga_only_energy": 'solid',
+            "mopga_only_energy": 'dashdot',
     }
 
 
@@ -194,7 +212,9 @@ if __name__ == '__main__':
         grid_plot_linestyles,
         plot_envs=False,
         plot_emitter_counts=False,
-        plot_grid=True,
+        plot_grid=False,
         print_min_max_scores=False,
         pairwise_coverage_analysis=False,
+        plot_global_fronts=True,
+        num_replications=10,
     )
