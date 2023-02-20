@@ -7,15 +7,15 @@ from typing import List, Any, Dict
 
 
 # CHANGE THESE TO ADJUST APPEARANCE OF PLOT
-FIG_WIDTH = 24
-FIG_HEIGHT = 15
+FIG_WIDTH = 20
+FIG_HEIGHT = 10
 FIGURE_DPI = 200
 
 # ---- font sizes and weights ------
-BIG_GRID_FONT_SIZE  = 16
+BIG_GRID_FONT_SIZE  = 14
 SMALL_GRID_FONT_SIZE = 14
 TITLE_FONT_WEIGHT = 'bold' # Can be: ['normal' | 'bold' | 'heavy' | 'light' | 'ultrabold' | 'ultralight']
-LEGEND_FONT_SIZE = 'xx-large'
+LEGEND_FONT_SIZE = 'x-large'
 
 # ----- colour palettes ------
 COLOUR_PALETTE = "colorblind"
@@ -23,7 +23,7 @@ COLOUR_PALETTE = "colorblind"
 # ----  spacing -----
 LEFTSPACING = 0.13   # the left side of the subplots of the figure
 RIGHTSPACING = 0.9   # the right side of the subplots of the figure
-BOTTOMSPACING = 0.09  # the bottom of the subplots of the figure
+BOTTOMSPACING = 0.1  # the bottom of the subplots of the figure
 TOPSPACING = 0.87   # the top of the subplots of the figure
 WIDTHSPACING = 0.1  # the proportion of width reserved for blank space between subplots
 HEIGHTSPACING = 0.1  # the proportion of height reserved for blank space between subplots
@@ -59,21 +59,27 @@ def customize_axis(ax: Any) -> Any:
     return ax
 
 
-def plot_experiments_grid(parent_dirname,
-    env_names,
-    env_labels,
-    experiment_names,
-    experiment_labels,
-    grid_plot_metrics_list,
-    grid_plot_metrics_labels,
-    grid_plot_linestyles,
-    medians,
-    lqs, 
-    uqs,
-    num_iterations: int=4000,
-    episode_length: int=1000,
-    batch_size: int=256,
+def plot_experiments_grid(parent_dirname: str,
+    env_names: List[str],
+    env_labels: Dict,
+    experiment_names: List[str],
+    experiment_labels: Dict,
+    grid_plot_metrics_list: List[str],
+    grid_plot_metrics_labels: Dict,
+    grid_plot_linestyles: Dict,
+    medians: List[pd.DataFrame],
+    lqs: List[pd.DataFrame], 
+    uqs:  List[pd.DataFrame],
+    num_iterations: int,
+    episode_length: int,
+    batch_size: int,
+    x_axis_evaluations: bool=True
  ) -> None:
+
+    print("\n")
+    print("-------------------------------------------------------------------------")
+    print("                   Plotting grid plot of experiments                     ")
+    print("-------------------------------------------------------------------------")
 
     _analysis_dir = os.path.join(parent_dirname, "analysis/")
     os.makedirs(_analysis_dir, exist_ok=True)
@@ -95,14 +101,13 @@ def plot_experiments_grid(parent_dirname,
 
     plt.rcParams.update(params)
     
-    # Get episode lengths/labels
-    x_range = np.arange(num_iterations + 1) * episode_length * batch_size
-
-    if episode_length != 1:
-        x_label = "Environment steps"
+    if x_axis_evaluations:
+        x_range = np.arange(num_iterations + 1)  * batch_size
+        x_label = "Number of evaluations"
 
     else:
-        x_label = "Number of evaluations"
+        x_range = np.arange(num_iterations + 1) * episode_length * batch_size
+        x_label = "Environment steps"
 
     fig, ax = plt.subplots(
         figsize=(FIG_WIDTH, FIG_HEIGHT),
@@ -126,7 +131,7 @@ def plot_experiments_grid(parent_dirname,
             )
 
             if row == 0:
-                ax.ravel()[fig_num].set_title(env_labels[col])
+                ax.ravel()[fig_num].set_title(env_labels[env])
             
             if row + 1 == num_rows:
                 ax.ravel()[fig_num].set_xlabel(x_label, fontsize=SMALL_GRID_FONT_SIZE)
@@ -135,7 +140,7 @@ def plot_experiments_grid(parent_dirname,
 
 
             if col == 0:
-                ax.ravel()[fig_num].set_ylabel(f"{grid_plot_metrics_labels[row]}"+ " (%)", 
+                ax.ravel()[fig_num].set_ylabel(f"{grid_plot_metrics_labels[metric]}"+ " (%)", 
                     fontsize=BIG_GRID_FONT_SIZE,
                     fontweight=TITLE_FONT_WEIGHT
                 )
@@ -146,10 +151,9 @@ def plot_experiments_grid(parent_dirname,
 
     fig.align_ylabels()
     
-
-    plt.figlegend(experiment_labels, 
+    plt.figlegend(experiment_labels.values(), 
         loc = 'lower center',
-        ncol=int(len(experiment_labels)), 
+        ncol=int(len(experiment_labels.values())), 
         fontsize=LEGEND_FONT_SIZE,
     )
     
@@ -175,17 +179,14 @@ def plot_grid_square(
     x_range: int,
     metrics_label: str,
     experiment_names: List[str],
-    experiment_labels: List[str],
+    experiment_labels: Dict,
     experiment_linestyles: Dict,
     colour_frame: pd.DataFrame,
 ):
     """
-    Plots one subplot of grid
+    Plots one subplot of grid, normalising scores
     """
 
-    # Getting the correct color palette
-    exp_palette = colour_frame["Colour"].values
-    sns.set_palette(exp_palette)
 
     # Find the maximum uq of all experiments in order to scale metrics
     y_max = 0
@@ -194,6 +195,9 @@ def plot_grid_square(
         if final_score > y_max:
             y_max = final_score
 
+    # Getting the correct color palette
+    exp_palette = colour_frame["Colour"].values
+    sns.set_palette(exp_palette)
 
     for exp_num, exp_name in enumerate(experiment_labels):
         medians = np.array(median_metrics[exp_num][metrics_label])
@@ -205,6 +209,7 @@ def plot_grid_square(
             scaled_medians,
             label=exp_name,
             linestyle=experiment_linestyles[experiment_names[exp_num]],
+            color=exp_palette[exp_num]
         )
         # set all scales to be same
         ax.set_ylim([0, 101])
@@ -224,7 +229,9 @@ def plot_grid_square(
         ax.fill_between(x_range, 
             scaled_lqs,
             scaled_uqs,
-            alpha=0.2)
+            alpha=0.2,
+            color=exp_palette[exp_num]
+        )
 
     customize_axis(ax)
 

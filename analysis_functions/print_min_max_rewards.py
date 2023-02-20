@@ -14,12 +14,16 @@ def print_env_min_max_rewards(
     experiment_metrics_list: List[pd.DataFrame]
 )-> None:
 
+    print("\n")
+    print("---------------------------------------------------------------------------------")
+    print("             Finding min and max of rewards obtained in each environment         ")
+    print("---------------------------------------------------------------------------------")
+
+
     for env_num, env in enumerate(env_names):
 
-        print("------------------------------")
-        print(f"          ENV: {env}             ")
-        print("------------------------------")
         print("\n")
+        print(f"     ENV: {env}             ")
 
         print_min_max_rewards(experiment_metrics_list[env_num])
 
@@ -40,8 +44,8 @@ def print_min_max_rewards(
 
         # find min and max of each score for each replication
         for col in exp_min_metrics.columns:
-            exp_min_scores = pd.DataFrame(exp_min_metrics[col].apply(lambda x: np.fromstring(x.replace('[','').replace(']',''), sep=' ')).to_list(), columns=['score1', 'score2'])
-            exp_max_scores = pd.DataFrame(exp_max_metrics[col].apply(lambda x: np.fromstring(x.replace('[','').replace(']',''), sep=' ')).to_list(), columns=['score1', 'score2'])
+            exp_min_scores = pd.DataFrame(exp_min_metrics[col].apply(lambda x: np.fromstring(str(x).replace('[','').replace(']',''), sep=' ')).to_list(), columns=['score1', 'score2'])
+            exp_max_scores = pd.DataFrame(exp_max_metrics[col].apply(lambda x: np.fromstring(str(x).replace('[','').replace(']',''), sep=' ')).to_list(), columns=['score1', 'score2'])
 
             min_score1 = exp_min_scores["score1"].min()
             min_score2 = exp_min_scores["score2"].min()
@@ -53,5 +57,5 @@ def print_min_max_rewards(
             maxs_1.append(max_score1)
             maxs_2.append(max_score2)
 
-    print(f"MIN SCORES ACROSS ALL EXPERIMENTS: [{np.min(mins_1)}, {np.min(mins_2)}]",)
-    print(f"MAX SCORES ACROSS ALL EXPERIMENTS: [{np.max(maxs_1)}, {np.max(maxs_2)}]", )
+    print(f"Min scores: [{np.min(mins_1)}, {np.min(mins_2)}]",)
+    print(f"Max scores: [{np.max(maxs_1)}, {np.max(maxs_2)}]", )

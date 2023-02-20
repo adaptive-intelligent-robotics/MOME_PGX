@@ -15,20 +15,19 @@ def print_pairwise_coverage(parent_dirname: str,
     env_names: List[str],
     experiment_names: List[str],
 ) -> None:
-
-    print("CALCULATING PAIRWISE COVERAGE SCORES FOR EACH ENV")
+    print("\n")
+    print("---------------------------------------------------------------------------------")
+    print("Calculating pairwise coverage of PF points for each env, for each experiment")
     print("Table scores: proportion of points in row global pf dominated by col global pf")
+    print("---------------------------------------------------------------------------------")
 
     # Calculate coverage scores for each environment
     for env in env_names:
 
-        print("------------------------------")
-        print(f"          ENV: {env}             ")
-        print("------------------------------")
         print("\n")
+        print(f"     ENV: {env}             ")
 
         env_dirname = os.path.join(parent_dirname, f"{env}/")
-
         _analysis_dir = os.path.join(env_dirname, "analysis/")
 
         # Calculate coverage scores for each experiment
@@ -53,6 +52,10 @@ def get_pfs(
     dirname: str, 
     experiment_name: str
 )-> pd.DataFrame:
+    """
+    Load in fitnesses of experiments and find global Pareto fronts
+
+    """
 
     global_pareto_fronts = []
 
@@ -68,6 +71,9 @@ def calculate_pairwise_coverage(
     global_pareto_fronts: List[jnp.ndarray],
     experiment_names: List[str]
 ):
+    """
+    Find median pairwise coverage across replications
+    """
     num_replications = len(global_pareto_fronts[0])
 
     metrics = []
@@ -89,6 +95,9 @@ def calculate_rep_coverage(
     rep_global_pfs: List[jnp.array],
     experiment_names: List[str],
 )-> pd.DataFrame:
+    """
+    Calculate pairwise coverage for given replication of experiments
+    """
     ## Table scores: proportion of points in row global pf dominated by col global pf
     rep_df = pd.DataFrame(columns=experiment_names, index=experiment_names)
     for exp1_num, exp1 in enumerate(experiment_names):
@@ -105,6 +114,10 @@ def calculate_rep_coverage(
 def get_global_pareto_front(
     fitnesses: jnp.array
 ):
+    """
+    Find global pareto front from final fitnesses
+
+    """
 
     fitnesses= jnp.concatenate(fitnesses, axis=0)
     mask = jnp.any(fitnesses == -jnp.inf, axis=-1)

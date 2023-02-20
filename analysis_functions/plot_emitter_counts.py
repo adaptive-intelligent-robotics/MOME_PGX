@@ -2,10 +2,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os
 import pandas as pd
-import seaborn as sns
-
-sns.set_palette("muted")
-
 from typing import List, Dict
 
 
@@ -16,15 +12,18 @@ def plot_env_emitter_counts(parent_dirname: str,
     emitter_names: Dict,
     emitter_labels: Dict,
     metrics_list: List[pd.DataFrame],
+    num_iterations: int,
 )-> None:
 
+    print("\n")
+    print("-------------------------------------------------------------------------")
+    print("     Plotting emitter counts for each experiment in each enivronment     ")
+    print("-------------------------------------------------------------------------")
 
     for env_num, env in enumerate(env_names):
 
-        print("------------------------------")
-        print(f"          ENV: {env}             ")
-        print("------------------------------")
         print("\n")
+        print(f"     ENV: {env}             ")
 
         dirname = os.path.join(parent_dirname, env)
 
@@ -38,6 +37,7 @@ def plot_env_emitter_counts(parent_dirname: str,
                             emitter_labels,
                             experiment_names,
                             experiment_labels,
+                            num_iterations,
                             _emitter_plots_dir)
 
 
@@ -49,13 +49,11 @@ def plot_emitter_counts(metrics_list: List[pd.DataFrame],
     emitter_names: Dict,
     emitter_labels: Dict,
     experiment_names: List[str],
-    experiment_labels: List[str],
+    experiment_labels: Dict,
+    num_iterations: int,
     save_dir: str,
     rolling_window_size: int=50,
-    num_iterations: int=4000,
 ) -> None:
-    print("------ Plotting Emitter Counts ------")
-    print("\n")
 
     # For each experiment
     for exp_num, exp_name in enumerate(experiment_names):
@@ -89,6 +87,6 @@ def plot_emitter_counts(metrics_list: List[pd.DataFrame],
                 ax1.fill_between(x, y_stack[emitter_num, :], y_stack[emitter_num+1,:], alpha=0.7, label=emitter_labels[exp_name][emitter_num])
                 ax1.legend()
             
-            plt.title(f"Emitter Counts for {experiment_labels[exp_num]} Experiment")
+            plt.title(f"Emitter Counts for {experiment_labels[exp_name]} Experiment")
             plt.savefig(os.path.join(save_dir, f"{exp_name}_emitter_counts_rep_{rep}"))
             plt.close()
