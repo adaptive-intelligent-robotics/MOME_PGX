@@ -30,6 +30,7 @@ class ExperimentConfig:
     # MOO parameters
     num_objective_functions: int
     pareto_front_max_length: int
+    bias_sampling: bool
 
     # Initialisation parameters
     num_evaluations: int
@@ -72,12 +73,9 @@ class ExperimentConfig:
     num_critic_training_steps: int 
     num_pg_training_steps: int 
 
-    # Ablation parameters
-    only_forward_emitter: bool
-    only_energy_emitter: bool
 
 
-@hydra.main(config_path="configs/brax/", config_name="brax_mopga")
+@hydra.main(config_path="configs/brax/", config_name="brax_mome_pgx")
 def main(config: ExperimentConfig) -> None:
 
     batch_size = config.mutation_ga_batch_size + config.mutation_qpg_batch_size * config.num_objective_functions
@@ -168,40 +166,18 @@ def main(config: ExperimentConfig) -> None:
         num_pg_training_steps=config.num_pg_training_steps
     )
 
-    if config.only_forward_emitter:
-        print("------ ONLY USING FORWARD MOTION EMITTER ------")
-        mopga_emitter_config.mutation_qpg_batch_size = config.mutation_qpg_batch_size * 2 
-        pg_emitter = AblationPGAMEEmitter(
-            config=mopga_emitter_config,
-            objective_index=0,
-            policy_network=policy_network,
-            env=env,
-            variation_fn=variation_function,
-        ) 
 
-    elif config.only_energy_emitter:
-        print("------ ONLY USING ENERGY MOTION EMITTER ------")
-        mopga_emitter_config.mutation_qpg_batch_size = config.mutation_qpg_batch_size * 2 
-        pg_emitter = AblationPGAMEEmitter(
-            config=mopga_emitter_config,
-            objective_index=1,
-            policy_network=policy_network,
-            env=env,
-            variation_fn=variation_function,
-        )  
-
-    else:
-        pg_emitter = MOPGAEmitter(
-            config=mopga_emitter_config,
-            policy_network=policy_network,
-            env=env,
-            variation_fn=variation_function,
-        )
+    pg_emitter = MOPGAEmitter(
+        config=mopga_emitter_config,
+        policy_network=policy_network,
+        env=env,
+        variation_fn=variation_function,
+    )
 
     mome = RunMOME(
         pareto_front_max_length=config.pareto_front_max_length,
         num_descriptor_dimensions=env.behavior_descriptor_length,
-        bias_sampling=False,
+        bias_sampling=True,
         minval=config.minval,
         maxval=config.maxval,
         num_evaluations=config.num_evaluations, 

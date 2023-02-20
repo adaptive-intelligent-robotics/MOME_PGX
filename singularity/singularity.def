@@ -37,29 +37,6 @@ From: airl_lab/default/airl_env:qdax_f57720d0
         git checkout $SINGULARITY_COMMIT
     fi
 
-%apprun mopga
-    cd /project/
-    # Running the scrpt
-    echo
-    echo "Running python3 brax_mopga.py "$@" "
-    echo
-    python3 brax_mopga.py "$@"
-
-%apprun mopga_only_forward_emitter
-    cd /project/
-    # Running the scrpt
-    echo
-    echo "Running python3 brax_mopga.py only_forward_emitter=True algo_name="mopga_only_forward" "$@" "
-    echo
-    python3 brax_mopga.py only_forward_emitter=True algo_name="mopga_only_forward" "$@"
-
-%apprun mopga_only_energy_emitter
-    cd /project/
-    # Running the scrpt
-    echo
-    echo "Running python3 brax_mopga.py only_energy_emitter=True algo_name="mopga_only_energy" "$@" "
-    echo
-    python3 brax_mopga.py only_energy_emitter=True algo_name="mopga_only_energy" "$@"
 
 %apprun mome
     cd /project/
@@ -93,29 +70,14 @@ From: airl_lab/default/airl_env:qdax_f57720d0
     echo
     python3 brax_pga.py "$@"
 
-%apprun bandit_mopga
-    cd /project/
-    # Running the scrpt
-    echo
-    echo "Running python3 brax_bandit_mopga.py "$@" "
-    echo
-    python3 brax_bandit_mopga.py "$@"
 
-%apprun biased_bandit_mopga
+%apprun biased_mome_pgx
     cd /project/
     # Running the scrpt
     echo
-    echo "Running python3 brax_bandit_mopga.py bias_sampling=True "$@" "
+    echo "Running python3 brax_mome_pgx "$@" "
     echo
-    python3 brax_bandit_mopga.py bias_sampling=True algo_name="biased_bandit" "$@"
-
-%apprun biased_mopga
-    cd /project/
-    # Running the scrpt
-    echo
-    echo "Running python3 brax_mopga.py bias_sampling=True "$@" "
-    echo
-    python3 brax_mopga.py bias_sampling=True algo_name="biased_mopga" "$@"
+    python3 brax_mome_pgx.py "$@"
 
 %apprun biased_mome
     cd /project/
@@ -125,13 +87,29 @@ From: airl_lab/default/airl_env:qdax_f57720d0
     echo
     python3 brax_mome.py bias_sampling=True algo_name="biased_mome" "$@"
 
-%apprun many_emitter_mopga
+%apprun mopga
     cd /project/
     # Running the scrpt
     echo
-    echo "Running python3 brax_bandit_mopga.py many_emitters=True "$@" "
+    echo "Running python3 brax_mopga.py "$@" "
     echo
-    python3 brax_bandit_mopga.py many_emitters=True"$@"
+    python3 brax_mopga.py "$@"
+
+%apprun mopga_only_forward_emitter
+    cd /project/
+    # Running the scrpt
+    echo
+    echo "Running python3 brax_mopga.py only_forward_emitter=True algo_name="mopga_only_forward" "$@" "
+    echo
+    python3 brax_mopga.py only_forward_emitter=True algo_name="mopga_only_forward" "$@"
+
+%apprun mopga_only_energy_emitter
+    cd /project/
+    # Running the scrpt
+    echo
+    echo "Running python3 brax_mopga.py only_energy_emitter=True algo_name="mopga_only_energy" "$@" "
+    echo
+    python3 brax_mopga.py only_energy_emitter=True algo_name="mopga_only_energy" "$@"
 
 %help
     This is the development and running environment of QDax
