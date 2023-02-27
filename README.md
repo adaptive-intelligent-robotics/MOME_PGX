@@ -1,5 +1,5 @@
 ## Intro
-This repository contains all code used in [Improving the Data Efficiency of Multi-Objective Quality-Diversity through Gradient Assistance and Crowding Exploration]() paper. This  builds on top of the [QDax framework](https://github.com/adaptive-intelligent-robotics/QDax) and includes the newly introduced _Multi-Objective Map-Elites with Policy Gradient assistance and crowding-based eXploration_ ([MOME-PGX]()).
+This repository contains all code used in [Improving the Data Efficiency of Multi-Objective Quality-Diversity through Gradient Assistance and Crowding Exploration]() paper. This  builds on top of the [QDax framework](https://github.com/adaptive-intelligent-robotics/QDax) and includes the newly introduced _Multi-Objective Map-Elites with Policy Gradient assistance and crowding-based eXploration_ ([MOME-PGX](https://arxiv.org/abs/2302.12668)).
 
 
 MOME-PGX is a Multi-Objective Quality-Diversity algorithm which is based on the [MOME algorithm](https://arxiv.org/abs/2202.03057). In particular, both algorithms extend the Quality-Diversity paradigm to multi-objective problems by maintaing a Pareto front in each cell of a MAP-Elites grid. However, MOME-PGX improves the performance and data-efficiency of MOME in two ways:
